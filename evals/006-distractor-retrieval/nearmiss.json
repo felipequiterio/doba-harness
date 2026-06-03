@@ -1,0 +1,27 @@
+{
+  "_comment": "Near-miss distractors used by `make run`. Each is the SAME quantity/variables as the target's correct card but subtly WRONG — the dangerous kind a model can grab and compute a plausible-but-wrong answer. Phrased to sound legitimate (a confident wrong card is what actually fools a model).",
+  "astro-004": [
+    {
+      "name": "escape-velocity-energy-form",
+      "equation": "v = sqrt(mu / r)",
+      "variables": {"v": "escape speed [m/s]", "mu": "GM of the body [m^3/s^2]", "r": "distance from center [m]"},
+      "when": "Speed needed to escape the gravity well from radius r. (WRONG: this is the circular-orbit speed; escape speed is larger by sqrt(2). Plausible near-miss.)"
+    }
+  ],
+  "astro-016": [
+    {
+      "name": "hill-sphere-radius",
+      "equation": "r = a_planet * (m_planet / (3 * m_sun))^(1/3)",
+      "variables": {"r": "radius of gravitational dominance [m]", "a_planet": "planet's semi-major axis around the Sun [m]", "m_planet / m_sun": "planet-to-Sun mass ratio [dimensionless]"},
+      "when": "Region where the planet's gravity dominates over the Sun's. (A genuinely confusable alternative — this is the Hill sphere, not the Laplace sphere of influence, which uses exponent 2/5 not 1/3.)"
+    }
+  ],
+  "astro-027": [
+    {
+      "name": "hyperbolic-deflection-angle-acos",
+      "equation": "delta = 2 * acos(1 / e)",
+      "variables": {"delta": "total deflection (turn) angle between asymptotes [rad]", "e": "hyperbolic eccentricity"},
+      "when": "Turn angle of a hyperbolic flyby in a single-body field. (WRONG inverse function: the turn angle uses asin(1/e), not acos(1/e).)"
+    }
+  ]
+}

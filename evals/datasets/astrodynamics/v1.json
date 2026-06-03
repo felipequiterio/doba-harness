@@ -1,0 +1,1755 @@
+[
+  {
+    "id": "astro-001",
+    "topic": "circular-orbit-speed",
+    "structure": "single",
+    "statement": "A satellite is in a circular orbit at an altitude of 400 km above Earth's surface. What is its orbital speed?",
+    "given": {
+      "altitude_m": 400000.0
+    },
+    "expected": {
+      "value": 7668.558175407055,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v = sqrt(mu / r)",
+        "variables": {
+          "v": "circular orbital speed [m/s]",
+          "mu": "GM of the primary [m^3/s^2]",
+          "r": "orbital radius from primary center [m]"
+        },
+        "when": "two-body orbit, circular case (eccentricity = 0)."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "orbital radius [m]",
+          "R": "primary's radius [m]",
+          "h": "altitude above the surface [m]"
+        },
+        "when": "Always, when an altitude is given relative to a primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius (r = R_earth + h)",
+      "circular-orbit-speed (v = sqrt(mu/r))"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-002",
+    "topic": "vis-viva-perigee",
+    "structure": "multi",
+    "statement": "A satellite is in an elliptical Earth orbit with perigee altitude 200 km and apogee altitude 1000 km. What is its speed at perigee?",
+    "given": {
+      "perigee_altitude_m": 200000.0,
+      "apogee_altitude_m": 1000000.0
+    },
+    "expected": {
+      "value": 8004.257333459782,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed at radius r [m/s]",
+          "mu": "GM of the primary [m^3/s^2]",
+          "r": "current radial distance [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Two-body Keplerian orbit, any point on the orbit."
+      },
+      {
+        "name": "semi-major-from-apsides",
+        "equation": "a = (r_p + r_a) / 2",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "r_p": "perigee radius [m]",
+          "r_a": "apogee radius [m]"
+        },
+        "when": "Ellipse, when perigee and apogee radii are known."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "orbital radius [m]",
+          "R": "primary's radius [m]",
+          "h": "altitude above the surface [m]"
+        },
+        "when": "Always, when an altitude is given relative to a primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius for both apsides",
+      "semi-major-from-apsides (a = (r_p + r_a)/2)",
+      "vis-viva at r = r_p"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-003",
+    "topic": "kepler-3-period",
+    "structure": "single",
+    "statement": "What is the orbital period of a satellite in a circular orbit at 400 km altitude above Earth?",
+    "given": {
+      "altitude_m": 400000.0
+    },
+    "expected": {
+      "value": 5553.624271252228,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "orbital period [s]",
+          "a": "semi-major axis [m]",
+          "mu": "GM of the primary [m^3/s^2]"
+        },
+        "when": "Two-body orbit. For a circular orbit, a = r."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "orbital radius [m]",
+          "R": "primary's radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "Always, when an altitude is given relative to a primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "a = R_earth + h",
+      "Kepler-3 (T = 2 pi sqrt(a^3 / mu))"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-004",
+    "topic": "escape-velocity",
+    "structure": "single",
+    "statement": "What is the escape velocity from Earth's surface? (Ignore atmospheric drag.)",
+    "given": {},
+    "expected": {
+      "value": 11179.875415349425,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "escape-velocity",
+        "equation": "v_esc = sqrt(2 * mu / r)",
+        "variables": {
+          "v_esc": "escape speed [m/s]",
+          "mu": "GM of the primary [m^3/s^2]",
+          "r": "radial distance from primary center [m]"
+        },
+        "when": "Speed required for parabolic escape from radius r of a primary of GM = mu."
+      }
+    ],
+    "canonical_method": [
+      "r = R_earth (surface)",
+      "escape-velocity (v = sqrt(2 mu / r))"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-005",
+    "topic": "hohmann-delta-v",
+    "structure": "multi",
+    "statement": "Compute the total delta-v required for a Hohmann transfer from a 400 km circular Earth orbit to a circular geostationary orbit (GEO altitude 35 786 km). Sum the magnitudes of both impulsive burns.",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_altitude_m": 35786000.0
+    },
+    "expected": {
+      "value": 3853.9592164088203,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu / r)",
+        "variables": {
+          "v_c": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "current radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit, including the perigee/apogee of a transfer ellipse."
+      },
+      {
+        "name": "hohmann-transfer-semi-major",
+        "equation": "a_t = (r_1 + r_2) / 2",
+        "variables": {
+          "a_t": "transfer ellipse semi-major axis [m]",
+          "r_1": "inner circular radius [m]",
+          "r_2": "outer circular radius [m]"
+        },
+        "when": "Hohmann transfer between two coplanar circular orbits."
+      },
+      {
+        "name": "hohmann-total-dv",
+        "equation": "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)",
+        "variables": {
+          "v_c1": "circular speed at r_1 [m/s]",
+          "v_c2": "circular speed at r_2 [m/s]",
+          "v_t1": "transfer-ellipse speed at r_1 (perigee of transfer) [m/s]",
+          "v_t2": "transfer-ellipse speed at r_2 (apogee of transfer) [m/s]"
+        },
+        "when": "Sum of the magnitudes of the two impulsive Hohmann burns (r_2 > r_1)."
+      }
+    ],
+    "canonical_method": [
+      "r_1 = R_earth + 400 km; r_2 = R_earth + 35786 km",
+      "a_t = (r_1 + r_2)/2",
+      "v_c1 = sqrt(mu/r_1); v_c2 = sqrt(mu/r_2)",
+      "v_t1 = vis-viva at (r_1, a_t); v_t2 = vis-viva at (r_2, a_t)",
+      "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-006",
+    "topic": "kepler-3-period",
+    "structure": "single",
+    "statement": "What is the orbital period of a satellite in a circular Earth orbit at the geostationary altitude of 35 786 km? (Sanity check: a true GEO satellite has a sidereal-day period.)",
+    "given": {
+      "altitude_m": 35786000.0
+    },
+    "expected": {
+      "value": 86163.9904971709,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.005,
+    "oracle_cards": [
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "period [s]",
+          "a": "semi-major axis [m]",
+          "mu": "GM [m^3/s^2]"
+        },
+        "when": "Two-body orbit. For a circular orbit, a = r."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "When altitude is given above the surface."
+      }
+    ],
+    "canonical_method": [
+      "a = R_earth + 35786 km",
+      "Kepler-3 \u2192 T"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-007",
+    "topic": "hohmann-time-of-flight",
+    "structure": "multi",
+    "statement": "How long does a spacecraft on a Hohmann transfer from a 400 km circular Earth orbit to GEO (35 786 km altitude) spend in transit?",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_altitude_m": 35786000.0
+    },
+    "expected": {
+      "value": 19048.56250979711,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hohmann-transfer-semi-major",
+        "equation": "a_t = (r_1 + r_2) / 2",
+        "variables": {
+          "a_t": "transfer semi-major axis [m]",
+          "r_1": "start radius [m]",
+          "r_2": "target radius [m]"
+        },
+        "when": "Hohmann transfer between two coplanar circular orbits."
+      },
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "full orbital period [s]",
+          "a": "semi-major axis [m]",
+          "mu": "GM [m^3/s^2]"
+        },
+        "when": "Two-body orbit."
+      },
+      {
+        "name": "hohmann-time-of-flight",
+        "equation": "TOF = T / 2 = pi * sqrt(a_t^3 / mu)",
+        "variables": {
+          "TOF": "time of flight on the half-ellipse [s]",
+          "a_t": "transfer semi-major [m]",
+          "mu": "GM [m^3/s^2]"
+        },
+        "when": "Hohmann transfer (half of the transfer ellipse, perigee to apogee)."
+      }
+    ],
+    "canonical_method": [
+      "r_1, r_2 from altitudes",
+      "a_t = (r_1+r_2)/2",
+      "TOF = pi sqrt(a_t^3/mu)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-008",
+    "topic": "circular-orbit-speed",
+    "structure": "single",
+    "statement": "What is the orbital speed of a satellite in a circular orbit at the geostationary altitude of 35 786 km?",
+    "given": {
+      "altitude_m": 35786000.0
+    },
+    "expected": {
+      "value": 3074.6612890103515,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v = sqrt(mu / r)",
+        "variables": {
+          "v": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "When altitude is given above the surface."
+      }
+    ],
+    "canonical_method": [
+      "r = R_earth + 35786 km",
+      "v = sqrt(mu/r)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-009",
+    "topic": "vis-viva-apogee",
+    "structure": "multi",
+    "statement": "A satellite is in an elliptical Earth orbit with perigee altitude 200 km and apogee altitude 1000 km. What is its speed at apogee?",
+    "given": {
+      "perigee_altitude_m": 200000.0,
+      "apogee_altitude_m": 1000000.0
+    },
+    "expected": {
+      "value": 7136.368072692759,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "current radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "semi-major-from-apsides",
+        "equation": "a = (r_p + r_a) / 2",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "r_p": "perigee radius [m]",
+          "r_a": "apogee radius [m]"
+        },
+        "when": "Ellipse with known apsides."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "When altitude is given above the surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius for both apsides",
+      "semi-major-from-apsides",
+      "vis-viva at r = r_a"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-010",
+    "topic": "plane-change-delta-v",
+    "structure": "single",
+    "statement": "A spacecraft is in a 400 km circular Earth orbit. Compute the impulsive delta-v required for a pure plane change of 15 degrees (no change in orbital speed magnitude).",
+    "given": {
+      "altitude_m": 400000.0,
+      "plane_change_deg": 15.0
+    },
+    "expected": {
+      "value": 2001.8953969076586,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "simple-plane-change",
+        "equation": "delta_v = 2 * v * sin(theta / 2)",
+        "variables": {
+          "delta_v": "impulsive plane-change delta-v [m/s]",
+          "v": "orbital speed at the maneuver point [m/s]",
+          "theta": "plane-change angle [rad]"
+        },
+        "when": "Pure plane change at a single instant; speed magnitude unchanged."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v = sqrt(mu / r)",
+        "variables": {
+          "v": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      }
+    ],
+    "canonical_method": [
+      "r = R_earth + h",
+      "v = sqrt(mu/r)",
+      "delta_v = 2 v sin(theta/2), theta in radians"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-011",
+    "topic": "specific-orbital-energy",
+    "structure": "multi",
+    "statement": "Compute the specific orbital energy of a satellite in an Earth orbit with perigee altitude 200 km and apogee altitude 20 000 km.",
+    "given": {
+      "perigee_altitude_m": 200000.0,
+      "apogee_altitude_m": 20000000.0
+    },
+    "expected": {
+      "value": -12094827.279321685,
+      "unit": "J/kg"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "specific-orbital-energy",
+        "equation": "eps = -mu / (2 * a)",
+        "variables": {
+          "eps": "specific orbital energy [J/kg]",
+          "mu": "GM [m^3/s^2]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Two-body bound orbit (ellipse, including circular as a = r)."
+      },
+      {
+        "name": "semi-major-from-apsides",
+        "equation": "a = (r_p + r_a) / 2",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "r_p": "perigee radius [m]",
+          "r_a": "apogee radius [m]"
+        },
+        "when": "Ellipse with known apsides."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "Altitude given relative to the primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius for both apsides",
+      "a = (r_p + r_a)/2",
+      "eps = -mu/(2a)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-012",
+    "topic": "mean-motion",
+    "structure": "single",
+    "statement": "What is the mean motion of a satellite in a circular Earth orbit at 400 km altitude? Give the answer in rad/s.",
+    "given": {
+      "altitude_m": 400000.0
+    },
+    "expected": {
+      "value": 0.0011313666536110223,
+      "unit": "rad/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "mean-motion",
+        "equation": "n = sqrt(mu / a^3)",
+        "variables": {
+          "n": "mean motion [rad/s]",
+          "mu": "GM [m^3/s^2]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Two-body orbit. n = 2*pi / T; for a circular orbit a = r."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "Altitude given relative to the primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "a = R_earth + h",
+      "n = sqrt(mu/a^3)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-013",
+    "topic": "tsiolkovsky-delta-v",
+    "structure": "single",
+    "statement": "A rocket stage has a specific impulse Isp = 300 s and burns to a final-to-initial mass ratio of 1/3 (so m_0 / m_f = 3). Compute the ideal delta-v provided by this stage using the Tsiolkovsky rocket equation.",
+    "given": {
+      "isp_s": 300.0,
+      "mass_ratio": 3.0
+    },
+    "expected": {
+      "value": 3232.1118602001357,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "tsiolkovsky",
+        "equation": "delta_v = Isp * g0 * ln(m0 / mf)",
+        "variables": {
+          "delta_v": "ideal delta-v [m/s]",
+          "Isp": "specific impulse [s]",
+          "g0": "standard gravity, 9.80665 m/s^2",
+          "m0": "initial (wet) mass [any consistent units]",
+          "mf": "final (dry) mass [same units as m0]"
+        },
+        "when": "Single-stage impulsive maneuver with constant Isp; m0/mf is the mass ratio."
+      }
+    ],
+    "canonical_method": [
+      "delta_v = Isp * g0 * ln(m0/mf), with g0 = 9.80665 m/s^2"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-014",
+    "topic": "hohmann-delta-v",
+    "structure": "multi",
+    "statement": "Compute the total delta-v for a Hohmann transfer from a 400 km circular Earth orbit to an 800 km circular Earth orbit. Sum the magnitudes of both impulsive burns.",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_altitude_m": 800000.0
+    },
+    "expected": {
+      "value": 216.68232293745223,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hohmann-transfer-semi-major",
+        "equation": "a_t = (r_1 + r_2) / 2",
+        "variables": {
+          "a_t": "transfer semi-major [m]",
+          "r_1": "inner circular radius [m]",
+          "r_2": "outer circular radius [m]"
+        },
+        "when": "Hohmann transfer between two coplanar circular orbits."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu / r)",
+        "variables": {
+          "v_c": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "hohmann-total-dv",
+        "equation": "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)",
+        "variables": {
+          "v_c1": "circular speed at r_1 [m/s]",
+          "v_c2": "circular speed at r_2 [m/s]",
+          "v_t1": "transfer speed at r_1 [m/s]",
+          "v_t2": "transfer speed at r_2 [m/s]"
+        },
+        "when": "Sum of magnitudes of the two impulsive Hohmann burns (r_2 > r_1)."
+      }
+    ],
+    "canonical_method": [
+      "r_1 = R_earth + 400 km; r_2 = R_earth + 800 km",
+      "a_t = (r_1 + r_2)/2",
+      "v_c1, v_c2 = sqrt(mu/r)",
+      "v_t1, v_t2 = vis-viva at (r_1, a_t) and (r_2, a_t)",
+      "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-015",
+    "topic": "hohmann-trans-lunar",
+    "structure": "multi",
+    "statement": "Compute the total delta-v for a Hohmann transfer from a 400 km circular Earth orbit out to a circular orbit at the Moon's mean distance from Earth (384 400 km from Earth's center). Treat Earth as the only gravitating body (no lunar capture).",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_radius_m": 384400000.0
+    },
+    "expected": {
+      "value": 3910.789634048311,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hohmann-transfer-semi-major",
+        "equation": "a_t = (r_1 + r_2) / 2",
+        "variables": {
+          "a_t": "transfer semi-major [m]",
+          "r_1": "inner radius [m]",
+          "r_2": "outer radius [m]"
+        },
+        "when": "Hohmann transfer between two coplanar circular orbits."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu / r)",
+        "variables": {
+          "v_c": "circular speed [m/s]",
+          "mu": "GM of primary [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "hohmann-total-dv",
+        "equation": "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)",
+        "variables": {
+          "v_c1": "circular at r_1 [m/s]",
+          "v_c2": "circular at r_2 [m/s]",
+          "v_t1": "transfer at r_1 [m/s]",
+          "v_t2": "transfer at r_2 [m/s]"
+        },
+        "when": "Sum of the two Hohmann burn magnitudes."
+      }
+    ],
+    "canonical_method": [
+      "r_1 = R_earth + 400 km",
+      "r_2 = 384 400 km (given directly, NOT altitude)",
+      "a_t = (r_1 + r_2)/2",
+      "v_c1, v_c2 = sqrt(mu_earth/r); v_t1, v_t2 = vis-viva",
+      "delta_v_total = (v_t1 - v_c1) + (v_c2 - v_t2)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-016",
+    "topic": "sphere-of-influence",
+    "structure": "single",
+    "statement": "Compute the radius of Earth's sphere of influence (SOI) with respect to the Sun. Use Earth's semi-major axis around the Sun = 1.495 978 707 \u00d7 10^11 m and Earth-to-Sun mass ratio = 3.002 73 \u00d7 10^-6.",
+    "given": {
+      "a_planet_helio_m": 149597870700.0,
+      "mass_ratio_to_sun": 3.00273e-06
+    },
+    "expected": {
+      "value": 924553240.7766126,
+      "unit": "m"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "sphere-of-influence",
+        "equation": "r_SOI = a_planet * (m_planet / m_sun)^(2/5)",
+        "variables": {
+          "r_SOI": "sphere-of-influence radius around the planet [m]",
+          "a_planet": "planet's semi-major axis around the Sun [m]",
+          "m_planet / m_sun": "planet-to-Sun mass ratio [dimensionless]"
+        },
+        "when": "Laplace SOI approximation; defines the boundary where the planet's gravity dominates over the Sun's."
+      }
+    ],
+    "canonical_method": [
+      "r_SOI = a_earth * (m_earth/m_sun)^(2/5)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-017",
+    "topic": "eccentricity-from-apsides",
+    "structure": "single",
+    "statement": "An Earth-orbiting satellite has perigee altitude 200 km and apogee altitude 1000 km. What is its orbital eccentricity?",
+    "given": {
+      "perigee_altitude_m": 200000.0,
+      "apogee_altitude_m": 1000000.0
+    },
+    "expected": {
+      "value": 0.05732188978233015,
+      "unit": "dimensionless"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "eccentricity-from-apsides",
+        "equation": "e = (r_a - r_p) / (r_a + r_p)",
+        "variables": {
+          "e": "orbital eccentricity [dimensionless]",
+          "r_a": "apogee radius [m]",
+          "r_p": "perigee radius [m]"
+        },
+        "when": "Ellipse with known apsides; identity from definition of e and a."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "Altitude given relative to the primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius for both apsides",
+      "e = (r_a - r_p)/(r_a + r_p)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-018",
+    "topic": "specific-angular-momentum",
+    "structure": "single",
+    "statement": "A satellite passes its perigee at a radial distance of 6 778 137 m moving at 8000 m/s. Compute the magnitude of its specific angular momentum.",
+    "given": {
+      "perigee_radius_m": 6778137.0,
+      "perigee_speed_m_s": 8000.0
+    },
+    "expected": {
+      "value": 54225096000.0,
+      "unit": "m^2/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "angular-momentum-at-apsides",
+        "equation": "h = r_p * v_p   (and equivalently h = r_a * v_a)",
+        "variables": {
+          "h": "specific angular momentum [m^2/s]",
+          "r_p": "perigee radius [m]",
+          "v_p": "perigee speed [m/s]"
+        },
+        "when": "At perigee or apogee the velocity is perpendicular to the radius vector, so |r \u00d7 v| = r * v."
+      }
+    ],
+    "canonical_method": [
+      "h = r_p * v_p"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-019",
+    "topic": "escape-velocity",
+    "structure": "single",
+    "statement": "What is the escape velocity from Mars's surface? Use mu_mars = 4.282 837 \u00d7 10^13 m^3/s^2 and R_mars = 3 389 500 m.",
+    "given": {},
+    "expected": {
+      "value": 5027.047069823259,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "escape-velocity",
+        "equation": "v_esc = sqrt(2 * mu / r)",
+        "variables": {
+          "v_esc": "escape speed [m/s]",
+          "mu": "GM of primary [m^3/s^2]",
+          "r": "radial distance from primary center [m]"
+        },
+        "when": "Speed required for parabolic escape from radius r."
+      }
+    ],
+    "canonical_method": [
+      "r = R_mars (surface)",
+      "v_esc = sqrt(2 mu_mars / R_mars)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-020",
+    "topic": "v-infinity-from-c3",
+    "structure": "single",
+    "statement": "A spacecraft is launched onto a hyperbolic Earth-departure trajectory with a characteristic energy C3 = 8.6 km^2/s^2. What is its hyperbolic excess velocity v_infinity? Answer in m/s.",
+    "given": {
+      "c3_km2_s2": 8.6
+    },
+    "expected": {
+      "value": 2932.575659723036,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "v-infinity-from-c3",
+        "equation": "v_inf = sqrt(C3)",
+        "variables": {
+          "v_inf": "hyperbolic excess speed [m/s]",
+          "C3": "characteristic energy [m^2/s^2]"
+        },
+        "when": "By definition C3 = v_inf^2. Beware unit conventions: C3 is often quoted in km^2/s^2; convert to (m/s)^2 before sqrt."
+      }
+    ],
+    "canonical_method": [
+      "Convert C3 from km^2/s^2 to m^2/s^2 (\u00d710^6)",
+      "v_inf = sqrt(C3_SI)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-021",
+    "topic": "geo-altitude-from-period",
+    "structure": "multi",
+    "statement": "Compute the altitude above Earth's equator at which a circular Earth orbit has a period equal to one sidereal day (86 164.0905 s). This is the geostationary altitude.",
+    "given": {
+      "period_s": 86164.0905
+    },
+    "expected": {
+      "value": 35786032.62408609,
+      "unit": "m"
+    },
+    "tolerance_rel": 0.005,
+    "oracle_cards": [
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "orbital period [s]",
+          "a": "semi-major axis [m]",
+          "mu": "GM [m^3/s^2]"
+        },
+        "when": "Two-body orbit. For a circular orbit, a = r."
+      },
+      {
+        "name": "inverse-kepler-third",
+        "equation": "a = (mu * T^2 / (4 * pi^2))^(1/3)",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "mu": "GM [m^3/s^2]",
+          "T": "orbital period [s]"
+        },
+        "when": "Inverting Kepler-3 to recover a from a known period."
+      },
+      {
+        "name": "altitude-from-radius",
+        "equation": "h = a - R",
+        "variables": {
+          "h": "altitude [m]",
+          "a": "orbital radius / semi-major axis [m]",
+          "R": "primary radius [m]"
+        },
+        "when": "Convert a circular orbit's radius to altitude above the surface."
+      }
+    ],
+    "canonical_method": [
+      "a = (mu_earth * T^2 / (4 pi^2))^(1/3)",
+      "h = a - R_earth"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-022",
+    "topic": "molniya-perigee-velocity",
+    "structure": "multi",
+    "statement": "A Molniya-type satellite has perigee altitude 600 km and apogee altitude 39 400 km. What is its speed at perigee?",
+    "given": {
+      "perigee_altitude_m": 600000.0,
+      "apogee_altitude_m": 39400000.0
+    },
+    "expected": {
+      "value": 9956.487195836302,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "current radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "semi-major-from-apsides",
+        "equation": "a = (r_p + r_a) / 2",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "r_p": "perigee radius [m]",
+          "r_a": "apogee radius [m]"
+        },
+        "when": "Ellipse with known apsides."
+      },
+      {
+        "name": "altitude-to-radius",
+        "equation": "r = R + h",
+        "variables": {
+          "r": "radius [m]",
+          "R": "primary radius [m]",
+          "h": "altitude [m]"
+        },
+        "when": "Altitude given relative to the primary's surface."
+      }
+    ],
+    "canonical_method": [
+      "altitude-to-radius for both apsides",
+      "a = (r_p + r_a)/2",
+      "vis-viva at r = r_p"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-023",
+    "topic": "hohmann-interplanetary-tof",
+    "structure": "multi",
+    "statement": "Compute the time of flight on a heliocentric Hohmann transfer from Earth's orbit to Mars's orbit. Use Earth's heliocentric distance = 1.495 978 707 \u00d7 10^11 m, Mars's heliocentric distance = 2.279 392 \u00d7 10^11 m, and mu_sun = 1.327 124 \u00d7 10^20 m^3/s^2. Answer in seconds.",
+    "given": {
+      "r1_helio_m": 149597870700.0,
+      "r2_helio_m": 227939200000.0
+    },
+    "expected": {
+      "value": 22366007.432752,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hohmann-transfer-semi-major",
+        "equation": "a_t = (r_1 + r_2) / 2",
+        "variables": {
+          "a_t": "transfer semi-major [m]",
+          "r_1": "departure circular radius [m]",
+          "r_2": "arrival circular radius [m]"
+        },
+        "when": "Hohmann transfer between two coplanar circular orbits."
+      },
+      {
+        "name": "hohmann-time-of-flight",
+        "equation": "TOF = pi * sqrt(a_t^3 / mu)",
+        "variables": {
+          "TOF": "time of flight on the half-ellipse [s]",
+          "a_t": "transfer semi-major [m]",
+          "mu": "GM of the central body [m^3/s^2]"
+        },
+        "when": "Hohmann transfer (half of the transfer ellipse, perigee to apogee). For heliocentric transfers, use mu_sun, NOT mu_earth."
+      }
+    ],
+    "canonical_method": [
+      "a_t = (r1 + r2)/2",
+      "TOF = pi * sqrt(a_t^3 / mu_sun)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-024",
+    "topic": "plane-change-delta-v",
+    "structure": "single",
+    "statement": "A spacecraft is in a circular geostationary orbit (altitude 35 786 km). Compute the impulsive delta-v required for a pure plane change of 10 degrees.",
+    "given": {
+      "altitude_m": 35786000.0,
+      "plane_change_deg": 10.0
+    },
+    "expected": {
+      "value": 535.9487766823385,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "simple-plane-change",
+        "equation": "delta_v = 2 * v * sin(theta / 2)",
+        "variables": {
+          "delta_v": "impulsive plane-change delta-v [m/s]",
+          "v": "orbital speed at the maneuver point [m/s]",
+          "theta": "plane-change angle [rad]"
+        },
+        "when": "Pure plane change at a single instant; speed magnitude unchanged. Cheaper at high-altitude (low-v) maneuver points \u2014 that's why plane changes are typically done at apogee or at GEO."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v = sqrt(mu / r)",
+        "variables": {
+          "v": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit at radius r."
+      }
+    ],
+    "canonical_method": [
+      "r = R_earth + 35786 km",
+      "v = sqrt(mu/r)",
+      "delta_v = 2 v sin(theta/2), theta in radians"
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-025",
+    "topic": "flight-path-angle",
+    "structure": "single",
+    "statement": "A satellite is in an elliptical orbit with eccentricity 0.1, currently at a true anomaly of 60 degrees. What is its flight-path angle (the angle between the velocity vector and the local horizontal) in radians?",
+    "given": {
+      "eccentricity": 0.1,
+      "true_anomaly_deg": 60.0
+    },
+    "expected": {
+      "value": 0.08229234324094745,
+      "unit": "rad"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "flight-path-angle",
+        "equation": "tan(gamma) = e * sin(nu) / (1 + e * cos(nu))",
+        "variables": {
+          "gamma": "flight-path angle (angle between velocity and local horizontal) [rad]",
+          "e": "orbital eccentricity [dimensionless]",
+          "nu": "true anomaly (angle from perigee) [rad]"
+        },
+        "when": "Any point on a Keplerian orbit. Zero at perigee and apogee, maximum near nu = 90 degrees. (Hintz Ch.2 \u00a72.3)"
+      }
+    ],
+    "canonical_method": [
+      "Convert nu to radians",
+      "gamma = atan(e sin(nu) / (1 + e cos(nu)))"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a72.3",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-026",
+    "topic": "radius-at-true-anomaly",
+    "structure": "multi",
+    "statement": "A satellite is in an orbit with semi-major axis 10 000 km and eccentricity 0.5. Compute its radial distance from the central body when its true anomaly is 90 degrees. Answer in metres.",
+    "given": {
+      "semi_major_m": 10000000.0,
+      "eccentricity": 0.5,
+      "true_anomaly_deg": 90.0
+    },
+    "expected": {
+      "value": 7500000.0,
+      "unit": "m"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "conic-radius",
+        "equation": "r = p / (1 + e * cos(nu))",
+        "variables": {
+          "r": "radial distance from focus [m]",
+          "p": "semi-latus rectum [m]",
+          "e": "eccentricity [dimensionless]",
+          "nu": "true anomaly [rad]"
+        },
+        "when": "Conic-section orbit (ellipse / parabola / hyperbola); polar form."
+      },
+      {
+        "name": "semi-latus-rectum",
+        "equation": "p = a * (1 - e^2)",
+        "variables": {
+          "p": "semi-latus rectum [m]",
+          "a": "semi-major axis [m]",
+          "e": "eccentricity [dimensionless]"
+        },
+        "when": "Ellipse. (For hyperbola use p = a*(1-e^2) with a<0.) (Hintz \u00a72.3)"
+      }
+    ],
+    "canonical_method": [
+      "p = a * (1 - e^2)",
+      "r = p / (1 + e * cos(nu)), nu in radians"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a72.3",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-027",
+    "topic": "hyperbolic-turn-angle",
+    "structure": "single",
+    "statement": "A spacecraft flies past Earth on a hyperbolic trajectory with hyperbolic excess velocity v_infinity = 5000 m/s and periapsis at 1000 km altitude (periapsis radius 7 378 137 m). What is the total turn (deflection) angle between the incoming and outgoing asymptotes, in radians?",
+    "given": {
+      "periapsis_radius_m": 7378137.0,
+      "v_infinity_m_s": 5000.0
+    },
+    "expected": {
+      "value": 1.5054842203282446,
+      "unit": "rad"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hyperbolic-eccentricity-from-periapsis",
+        "equation": "e = 1 + r_p * v_infinity^2 / mu",
+        "variables": {
+          "e": "hyperbolic eccentricity [>1]",
+          "r_p": "periapsis radius [m]",
+          "v_infinity": "hyperbolic excess speed [m/s]",
+          "mu": "GM of the primary [m^3/s^2]"
+        },
+        "when": "Hyperbolic flyby: derived from r_p = a(1-e) with a = -mu/v_infinity^2. (Hintz \u00a73.5)"
+      },
+      {
+        "name": "hyperbolic-turn-angle",
+        "equation": "sin(delta / 2) = 1 / e   \u21d2   delta = 2 * asin(1/e)",
+        "variables": {
+          "delta": "total deflection angle between asymptotes [rad]",
+          "e": "hyperbolic eccentricity"
+        },
+        "when": "Hyperbolic flyby in a single-body field. (Hintz \u00a73.5)"
+      }
+    ],
+    "canonical_method": [
+      "e = 1 + r_p * v_inf^2 / mu_earth",
+      "delta = 2 * asin(1/e)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a73.5",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-028",
+    "topic": "bi-elliptic-delta-v",
+    "structure": "multi",
+    "statement": "Compute the total delta-v for a bi-elliptic transfer from a 400 km circular Earth orbit to GEO (35 786 km altitude), routing via an intermediate apogee at 100 000 km altitude. Sum the magnitudes of all three burns.",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "intermediate_altitude_m": 100000000.0,
+      "target_altitude_m": 35786000.0
+    },
+    "expected": {
+      "value": 4240.1365891865335,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "bi-elliptic-transfer",
+        "equation": "delta_v_total = (v_t1_peri - v_c1) + (v_t2_apo - v_t1_apo) + (v_t2_peri - v_c2)",
+        "variables": {
+          "v_c1": "circular speed at start radius r_1 [m/s]",
+          "v_c2": "circular speed at target radius r_2 [m/s]",
+          "v_t1_peri": "first transfer ellipse speed at r_1 (perigee) [m/s]",
+          "v_t1_apo": "first transfer ellipse speed at r_b (apogee) [m/s]",
+          "v_t2_apo": "second transfer ellipse speed at r_b (apogee) [m/s]",
+          "v_t2_peri": "second transfer ellipse speed at r_2 (perigee) [m/s]"
+        },
+        "when": "Three impulsive burns: at r_1, at intermediate apogee r_b, at r_2. r_b > r_2 (route higher then drop back). Bi-elliptic beats Hohmann only for r_2/r_1 ~> 12. (Hintz \u00a73.4)"
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "current radius [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu / r)",
+        "variables": {
+          "v_c": "circular speed [m/s]",
+          "mu": "GM [m^3/s^2]",
+          "r": "radius [m]"
+        },
+        "when": "Circular orbit."
+      },
+      {
+        "name": "transfer-ellipse-semi-major",
+        "equation": "a_t = (r_inner + r_outer) / 2",
+        "variables": {
+          "a_t": "transfer ellipse semi-major axis [m]"
+        },
+        "when": "Ellipse spanning two radial extremes."
+      }
+    ],
+    "canonical_method": [
+      "r_1 = R_earth + 400 km;  r_b = R_earth + 100 000 km;  r_2 = R_earth + 35 786 km",
+      "a_t1 = (r_1 + r_b)/2;  a_t2 = (r_b + r_2)/2",
+      "v_c1, v_c2 = sqrt(mu/r)",
+      "v_t1_peri = vis-viva at (r_1, a_t1);  v_t1_apo = vis-viva at (r_b, a_t1)",
+      "v_t2_apo  = vis-viva at (r_b, a_t2);  v_t2_peri = vis-viva at (r_2, a_t2)",
+      "delta_v_total = (v_t1_peri - v_c1) + (v_t2_apo - v_t1_apo) + (v_t2_peri - v_c2)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a73.4",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-029",
+    "topic": "j2-nodal-regression",
+    "structure": "single",
+    "statement": "Compute the J2-induced nodal regression rate of a circular Earth orbit at 400 km altitude with 51.6 degree inclination. Use J2 = 1.08263e-3. Answer in rad/s (sign matters: westward drift for prograde orbits is negative).",
+    "given": {
+      "altitude_m": 400000.0,
+      "inclination_deg": 51.6
+    },
+    "expected": {
+      "value": -1.0105007259101772e-06,
+      "unit": "rad/s"
+    },
+    "tolerance_rel": 0.02,
+    "oracle_cards": [
+      {
+        "name": "j2-nodal-regression",
+        "equation": "Omega_dot = -(3/2) * J2 * (R_e / p)^2 * n * cos(i)",
+        "variables": {
+          "Omega_dot": "rate of change of the right ascension of the ascending node [rad/s]",
+          "J2": "second zonal harmonic of the primary [dimensionless]; J2 = 1.08263e-3 for Earth",
+          "R_e": "primary equatorial radius [m]",
+          "p": "semi-latus rectum [m]; p = a(1 - e^2). For circular orbits, p = a",
+          "n": "mean motion sqrt(mu/a^3) [rad/s]",
+          "i": "inclination [rad]"
+        },
+        "when": "Earth-orbiting satellite, secular J2 perturbation. Negative for prograde (i<90\u00b0), positive for retrograde. (Hintz \u00a75.4)"
+      },
+      {
+        "name": "mean-motion",
+        "equation": "n = sqrt(mu / a^3)",
+        "variables": {
+          "n": "mean motion [rad/s]",
+          "mu": "GM [m^3/s^2]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Two-body orbit."
+      }
+    ],
+    "canonical_method": [
+      "a = R_earth + h;  for circular orbit p = a, e = 0",
+      "n = sqrt(mu_earth / a^3)",
+      "Omega_dot = -(3/2) * J2 * (R_earth/p)^2 * n * cos(i), i in radians"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a75.4",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-030",
+    "topic": "sun-synchronous-inclination",
+    "structure": "multi",
+    "statement": "Compute the inclination required for a sun-synchronous circular Earth orbit at 800 km altitude. (Sun-sync means the orbit plane precesses with the Earth's motion around the Sun, so Omega_dot = 2*pi / sidereal_year.) Use J2 = 1.08263e-3 and sidereal year = 31 558 149.5 s. Answer in radians.",
+    "given": {
+      "altitude_m": 800000.0
+    },
+    "expected": {
+      "value": 1.7209426004081736,
+      "unit": "rad"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "j2-nodal-regression",
+        "equation": "Omega_dot = -(3/2) * J2 * (R_e / p)^2 * n * cos(i)",
+        "variables": {
+          "Omega_dot": "[rad/s]",
+          "J2": "[-]",
+          "R_e": "[m]",
+          "p": "semi-latus rectum [m]",
+          "n": "mean motion [rad/s]",
+          "i": "inclination [rad]"
+        },
+        "when": "Earth-orbiting satellite. (Hintz \u00a75.4)"
+      },
+      {
+        "name": "sun-synchronous-condition",
+        "equation": "Omega_dot_target = 2 * pi / sidereal_year",
+        "variables": {
+          "Omega_dot_target": "[rad/s]",
+          "sidereal_year": "Earth's sidereal year [s]; 31 558 149.5 s"
+        },
+        "when": "Sun-sync: orbit-plane precession matches Earth's mean motion around the Sun (so local solar time at ascending node is preserved)."
+      },
+      {
+        "name": "invert-for-inclination",
+        "equation": "cos(i) = -Omega_dot_target / ((3/2) * J2 * (R_e/p)^2 * n)   \u21d2   i = acos(...)",
+        "variables": {
+          "i": "required inclination [rad]"
+        },
+        "when": "Sun-sync orbits are always slightly retrograde (i > 90\u00b0), so cos(i) is negative."
+      }
+    ],
+    "canonical_method": [
+      "a = R_earth + h;  p = a (circular)",
+      "n = sqrt(mu/a^3)",
+      "Omega_dot_target = 2 pi / sidereal_year",
+      "cos(i) = -Omega_dot_target / ((3/2) J2 (R_earth/p)^2 n)",
+      "i = acos(cos(i))"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a75.4",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-031",
+    "topic": "combined-plane-change-circularize",
+    "structure": "multi",
+    "statement": "A spacecraft is on a Hohmann transfer from a 400 km circular Earth orbit to GEO (35 786 km altitude). At the transfer apogee, you simultaneously circularize AND rotate the orbital plane by 28.5 degrees in a single combined impulsive burn. Compute the magnitude of that single burn in m/s.",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_altitude_m": 35786000.0,
+      "plane_change_deg": 28.5
+    },
+    "expected": {
+      "value": 1824.062866543533,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "combined-maneuver-law-of-cosines",
+        "equation": "delta_v = sqrt(v_t^2 + v_c^2 - 2 * v_t * v_c * cos(theta))",
+        "variables": {
+          "delta_v": "single combined burn magnitude [m/s]",
+          "v_t": "transfer-ellipse speed at the maneuver point [m/s]",
+          "v_c": "target circular speed at the same radius [m/s]",
+          "theta": "plane-change angle [rad]"
+        },
+        "when": "Combine a plane change with an in-plane speed change in one burn. ALWAYS cheaper than doing them separately. (Hintz \u00a73.6)"
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "[m/s]",
+          "mu": "[m^3/s^2]",
+          "r": "[m]",
+          "a": "[m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu/r)",
+        "variables": {
+          "v_c": "[m/s]",
+          "mu": "[m^3/s^2]",
+          "r": "[m]"
+        },
+        "when": "Circular orbit."
+      }
+    ],
+    "canonical_method": [
+      "r_1 = R + 400 km;  r_2 = R + 35 786 km;  a_t = (r_1+r_2)/2",
+      "v_t (at r_2) = vis-viva(r_2, a_t)",
+      "v_c (at r_2) = sqrt(mu/r_2)",
+      "delta_v = sqrt(v_t^2 + v_c^2 - 2 v_t v_c cos(theta)), theta in radians"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a73.6",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-032",
+    "topic": "mean-anomaly-from-true",
+    "structure": "multi",
+    "statement": "A satellite is in an orbit with eccentricity 0.2 and is currently at a true anomaly of 120 degrees. Compute the corresponding mean anomaly M (in radians) using Kepler's equation. (The eccentric anomaly E is an intermediate step.)",
+    "given": {
+      "eccentricity": 0.2,
+      "true_anomaly_deg": 120.0
+    },
+    "expected": {
+      "value": 1.7220714279326057,
+      "unit": "rad"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "eccentric-anomaly-from-true",
+        "equation": "tan(E/2) = sqrt((1-e)/(1+e)) * tan(nu/2)   \u21d2   E = 2 * atan(sqrt((1-e)/(1+e)) * tan(nu/2))",
+        "variables": {
+          "E": "eccentric anomaly [rad]",
+          "e": "eccentricity",
+          "nu": "true anomaly [rad]"
+        },
+        "when": "Elliptical orbit. (Hintz \u00a72.4)"
+      },
+      {
+        "name": "kepler-equation",
+        "equation": "M = E - e * sin(E)",
+        "variables": {
+          "M": "mean anomaly [rad]",
+          "E": "eccentric anomaly [rad]",
+          "e": "eccentricity"
+        },
+        "when": "Kepler's transcendental equation, elliptical orbit. (Hintz \u00a72.4)"
+      }
+    ],
+    "canonical_method": [
+      "Convert nu to radians",
+      "E = 2 * atan(sqrt((1-e)/(1+e)) * tan(nu/2))",
+      "M = E - e * sin(E)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a72.4",
+    "knowledge_label": "absent"
+  },
+  {
+    "id": "astro-033",
+    "topic": "kepler-3-period",
+    "structure": "single",
+    "statement": "Compute the heliocentric orbital period of Mars using Kepler's third law. Use Mars's semi-major axis = 2.279 392 \u00d7 10^11 m and mu_sun = 1.327 124 \u00d7 10^20 m^3/s^2. Answer in seconds.",
+    "given": {},
+    "expected": {
+      "value": 59354353.76506807,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.005,
+    "oracle_cards": [
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "orbital period [s]",
+          "a": "semi-major axis [m]",
+          "mu": "GM of the central body [m^3/s^2]"
+        },
+        "when": "Two-body orbit. CRITICAL: use mu of the central body \u2014 mu_sun for heliocentric orbits, NOT mu_earth."
+      }
+    ],
+    "canonical_method": [
+      "T = 2 pi sqrt(a_mars^3 / mu_sun)"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a72.4",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-034",
+    "topic": "synodic-period",
+    "structure": "multi",
+    "statement": "Compute the synodic period of Earth and Mars (the time between successive Earth\u2013Mars launch opportunities). Use Earth's sidereal year = 31 558 149.5 s. You may compute Mars's orbital period from its heliocentric distance (a_mars = 2.279 392 \u00d7 10^11 m, mu_sun = 1.327 124 \u00d7 10^20 m^3/s^2). Answer in seconds.",
+    "given": {},
+    "expected": {
+      "value": 67387386.84360144,
+      "unit": "s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "synodic-period",
+        "equation": "T_syn = 1 / |1/T_1 - 1/T_2|",
+        "variables": {
+          "T_syn": "synodic period [s]",
+          "T_1": "orbital period of body 1 [s]",
+          "T_2": "orbital period of body 2 [s]"
+        },
+        "when": "Two bodies orbiting the same primary; the synodic period is the time between successive identical relative configurations. (Hintz \u00a73.5)"
+      },
+      {
+        "name": "kepler-third-law",
+        "equation": "T = 2*pi*sqrt(a^3 / mu)",
+        "variables": {
+          "T": "[s]",
+          "a": "[m]",
+          "mu": "[m^3/s^2]"
+        },
+        "when": "Two-body orbit."
+      }
+    ],
+    "canonical_method": [
+      "T_earth = sidereal_year (or 2 pi sqrt(a_earth^3/mu_sun))",
+      "T_mars  = 2 pi sqrt(a_mars^3 / mu_sun)",
+      "T_syn = 1 / |1/T_earth - 1/T_mars|"
+    ],
+    "ground_truth_source": "computed in ground_truth.py \u2014 Hintz \u00a73.5",
+    "knowledge_label": "present"
+  },
+  {
+    "id": "astro-035",
+    "topic": "transfer-comparison-min-dv",
+    "structure": "multi",
+    "statement": "A spacecraft must transfer from a 400 km circular Earth orbit to a 50 000 km circular Earth orbit. Two options are available: (a) a direct Hohmann transfer, or (b) a bi-elliptic transfer via an intermediate apogee at 100 000 km altitude. Compute the total delta-v of the MORE EFFICIENT (lower delta-v) of the two options. Sum the magnitudes of all burns in the chosen transfer.",
+    "given": {
+      "start_altitude_m": 400000.0,
+      "target_altitude_m": 50000000.0,
+      "intermediate_altitude_m": 100000000.0
+    },
+    "expected": {
+      "value": 4005.019012469602,
+      "unit": "m/s"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "circular-orbit-speed",
+        "equation": "v_c = sqrt(mu / r)",
+        "variables": {
+          "v_c": "[m/s]",
+          "mu": "[m^3/s^2]",
+          "r": "[m]"
+        },
+        "when": "Circular orbit."
+      },
+      {
+        "name": "vis-viva",
+        "equation": "v = sqrt(mu * (2/r - 1/a))",
+        "variables": {
+          "v": "[m/s]",
+          "mu": "[m^3/s^2]",
+          "r": "[m]",
+          "a": "[m]"
+        },
+        "when": "Any point on a Keplerian orbit."
+      },
+      {
+        "name": "hohmann-total-dv",
+        "equation": "delta_v_h = (v_t1 - v_c1) + (v_c2 - v_t2),   a_t = (r_1 + r_2)/2",
+        "variables": {
+          "v_c1": "circular at r_1 [m/s]",
+          "v_c2": "circular at r_2 [m/s]",
+          "v_t1": "transfer at r_1 [m/s]",
+          "v_t2": "transfer at r_2 [m/s]"
+        },
+        "when": "Direct Hohmann between two coplanar circular orbits."
+      },
+      {
+        "name": "bi-elliptic-total-dv",
+        "equation": "delta_v_be = (v_t1p - v_c1) + (v_t2a - v_t1a) + (v_t2p - v_c2)",
+        "variables": {
+          "a_t1": "(r_1 + r_b)/2 [m]",
+          "a_t2": "(r_b + r_2)/2 [m]",
+          "v_t1p": "vis-viva at r_1 on first ellipse",
+          "v_t1a": "vis-viva at r_b on first ellipse (apogee)",
+          "v_t2a": "vis-viva at r_b on second ellipse (apogee)",
+          "v_t2p": "vis-viva at r_2 on second ellipse (perigee)"
+        },
+        "when": "Bi-elliptic via intermediate apogee r_b > r_2. Three impulsive burns."
+      },
+      {
+        "name": "choose-the-smaller",
+        "equation": "answer = min(delta_v_h, delta_v_be)",
+        "variables": {},
+        "when": "When two valid options are compared, the more efficient one is the smaller delta-v."
+      }
+    ],
+    "canonical_method": [
+      "Compute delta_v_h via Hohmann (a_t = (r_1+r_2)/2, vis-viva twice).",
+      "Compute delta_v_be via bi-elliptic (a_t1, a_t2, vis-viva four times).",
+      "Return min(delta_v_h, delta_v_be)."
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": null
+  },
+  {
+    "id": "astro-036",
+    "topic": "hyperbolic-periapsis-from-energy",
+    "structure": "multi",
+    "statement": "A spacecraft is on a hyperbolic Earth-encounter trajectory with hyperbolic excess velocity v_infinity = 5 km/s. At closest approach (periapsis), its speed is 12 km/s. Compute its periapsis radius in meters.",
+    "given": {
+      "periapsis_speed_m_s": 12000.0,
+      "v_infinity_m_s": 5000.0
+    },
+    "expected": {
+      "value": 6699167.0890756305,
+      "unit": "m"
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "hyperbolic-energy-equation",
+        "equation": "v^2 = v_infinity^2 + 2*mu/r",
+        "variables": {
+          "v": "speed at radius r [m/s]",
+          "v_infinity": "hyperbolic excess speed [m/s]",
+          "mu": "GM of primary [m^3/s^2]",
+          "r": "radial distance from primary center [m]"
+        },
+        "when": "Any point on a hyperbolic (or parabolic, with v_infinity = 0) trajectory. Energy conservation: specific kinetic energy = v_infinity^2/2 + mu/r is constant. CRITICAL: speeds in (m/s)^2 NOT (km/s)^2 \u2014 convert before squaring."
+      },
+      {
+        "name": "solve-for-r-periapsis",
+        "equation": "r_p = 2 * mu / (v_p^2 - v_infinity^2)",
+        "variables": {
+          "r_p": "periapsis radius [m]",
+          "v_p": "periapsis speed [m/s]",
+          "v_infinity": "hyperbolic excess speed [m/s]"
+        },
+        "when": "Algebraic rearrangement of the energy equation at periapsis."
+      }
+    ],
+    "canonical_method": [
+      "Convert v_p and v_infinity to m/s if given in km/s.",
+      "r_p = 2 mu_earth / (v_p^2 - v_infinity^2)."
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": null
+  },
+  {
+    "id": "astro-037",
+    "topic": "semi-major-axis-from-period",
+    "structure": "single",
+    "statement": "A satellite is in orbit around Earth with an orbital period of 7200 s. Using Earth's gravitational parameter mu = 3.986004418e14 m^3/s^2, compute the orbit's semi-major axis in meters.",
+    "given": {
+      "period_s": 7200.0
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "semi-major-axis-from-period",
+        "equation": "a = (mu*T^2/(4*pi^2))^(1/3)",
+        "variables": {
+          "a": "semi-major axis [m]",
+          "mu": "GM of primary [m^3/s^2]",
+          "T": "orbital period [s]"
+        },
+        "when": "Invert Kepler's third law T = 2*pi*sqrt(a^3/mu) by solving for a."
+      }
+    ],
+    "canonical_method": [
+      "Kepler third law: T = 2*pi*sqrt(a^3/mu).",
+      "Solve for a: a = (mu*T^2/(4*pi^2))^(1/3)."
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": null,
+    "expected": {
+      "value": 8058997.306563405,
+      "unit": "m"
+    }
+  },
+  {
+    "id": "astro-038",
+    "topic": "orbital-speed-from-energy",
+    "structure": "single",
+    "statement": "A spacecraft orbits Earth on an elliptical orbit with semi-major axis a = 8.0e6 m. At the instant it is at radial distance r = 7.0e6 m from Earth's center, compute its speed in m/s. Use mu = 3.986004418e14 m^3/s^2.",
+    "given": {
+      "radius_m": 7000000.0,
+      "semi_major_axis_m": 8000000.0
+    },
+    "tolerance_rel": 0.01,
+    "oracle_cards": [
+      {
+        "name": "orbital-speed-from-energy",
+        "equation": "v = sqrt(mu*(2/r - 1/a))",
+        "variables": {
+          "v": "speed at radius r [m/s]",
+          "mu": "GM of primary [m^3/s^2]",
+          "r": "radial distance [m]",
+          "a": "semi-major axis [m]"
+        },
+        "when": "Solve the energy equation v^2/2 - mu/r = -mu/(2a) for v (the vis-viva relation)."
+      }
+    ],
+    "canonical_method": [
+      "Energy equation: v^2/2 - mu/r = -mu/(2a).",
+      "Solve for v: v = sqrt(mu*(2/r - 1/a))."
+    ],
+    "ground_truth_source": "computed in ground_truth.py",
+    "knowledge_label": null,
+    "expected": {
+      "value": 8003.7981789451505,
+      "unit": "m/s"
+    }
+  }
+]

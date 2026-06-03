@@ -1,0 +1,62 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 3.5 (Interplanetary
+Trajectories), "Hyperbolic Trajectories", pp. 83-86.
+
+----------------------------------------------------------------------
+
+Hyperbolic Trajectories
+
+Define:
+  theta_inf  = the true anomaly of the (outgoing) asymptote
+  v_inf      = the hyperbolic excess velocity (the speed a vehicle on an escape
+               trajectory has in excess of escape speed; the speed it would
+               still have "at infinity")
+  delta      = the deflection angle of v_inf = the angle between the incoming
+               and outgoing asymptotes = the turn angle = the amount v_inf is
+               turned during the flyby
+  rho        = the hyperbolic asymptote angle
+
+The energy equation for a hyperbolic trajectory is
+
+        v^2/2 - mu/r  =  v_inf^2 / 2  =  -mu/(2a)                    (3.24)
+
+Solving for the semi-major axis a (note a is negative for a hyperbola):
+
+        a = - mu / v_inf^2                                          (3.25)
+
+Also, the periapsis radius satisfies
+
+        r_p = a * (1 - e)                                           (3.26)
+
+Solving this equation for e and substituting for a using Eq. (3.25):
+
+        e = 1 - r_p/a = 1 + r_p * v_inf^2 / mu                      (3.27)
+
+which is a function of r_p and v_inf, the fundamental parameters for flyby
+analyses.
+
+At periapsis, the energy equation gives
+
+        v_p = sqrt( v_inf^2 + 2*mu/r_p )                            (3.28)
+
+Determine theta_inf, delta, and rho. Each of these is a measure of the bending
+of a hyperbolic trajectory. Solving the conic equation for cos(theta) and taking
+the limit as r approaches infinity:
+
+        theta_inf = arccos( -1/e )                                  (3.30)
+
+It is geometrically obvious that
+
+        theta_inf = delta/2 + pi/2                                  (3.31)
+
+From Eqs. (3.30) and (3.31), we obtain
+
+        1/e = sin( delta/2 )                                        (3.32)
+
+Solving for delta,
+
+        delta = 2 * arcsin( 1/e )                                   (3.33)
+
+From this equation we see that a large value of e implies a small delta;
+therefore a large e implies little bending. The shape of the hyperbolic
+trajectory depends on the closest-approach distance r_p, the speed at infinity
+v_inf, and the gravitational parameter mu of the planet.

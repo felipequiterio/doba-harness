@@ -1,0 +1,40 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 2.3 (Central
+Force Motion), "Flight Path Angle", pp. 45-47.
+
+----------------------------------------------------------------------
+
+Flight Path Angle
+
+Recall that the velocity vector v is the rate of change of arc length traveled
+and is always tangent to the path of the particle. The velocity vector is
+
+        v = r_dot * i_r  +  r * theta_dot * i_theta
+
+with magnitude
+
+        v = sqrt( (r_dot)^2 + (r * theta_dot)^2 )
+
+Def.: The flight path angle beta is the angle between the velocity vector v and
+the local horizontal (i.e., the direction perpendicular to r along the
+direction of motion), with positive values corresponding to v above the
+horizontal direction.
+
+The magnitude of the radial component of the velocity vector is
+
+        r_dot = v * sin(beta)                                       (2.23)
+
+The magnitude of the transverse component of the velocity vector is
+
+        r * theta_dot = v * cos(beta)                              (2.24)
+
+We proceed now to derive an identity relating beta and the true anomaly theta.
+The radial component can be written as
+
+        v * sin(beta) = r_dot = (mu / h) * e * sin(theta)           (2.26)
+
+and the transverse component as
+
+        v * cos(beta) = r * theta_dot = (mu / h) * (1 + e * cos(theta))
+
+where mu is the gravitational parameter, h is the specific angular momentum, e
+is the eccentricity, and theta is the true anomaly (measured from periapsis).

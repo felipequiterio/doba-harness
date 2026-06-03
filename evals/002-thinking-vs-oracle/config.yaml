@@ -1,0 +1,57 @@
+# 002 — thinking-vs-oracle config.
+#
+# Same harness as 001, different model knobs:
+#   - max_tokens raised to 8192 because thinking-mode runs eat tokens
+#   - num_ctx raised to 16384 so KV cache holds prompt + completion
+#
+# `disable_thinking` here is the default for any non-suffixed condition.
+# Suffixed conditions override it: `_T` forces ON, `_NT` forces OFF.
+# This eval uses `_T` and `_NT` exclusively, so the default below is
+# irrelevant for the run — kept consistent with 001 for clarity.
+
+local_model:
+  provider: "ollama"
+  base_url: "http://localhost:11434"
+  model_name: "qwen3.5:4b"
+  api_key_env: null
+  max_tokens: 8192
+  disable_thinking: true
+  extra_body:
+    # Do NOT set `think` here. The per-condition `_T` / `_NT` suffix sets
+    # it per-call; a value here would silently override that. See 001's
+    # config.yaml for the cautionary tale.
+    options:
+      num_ctx: 16384      # room for prompt + ~8K of thinking
+      num_gpu: 99
+    keep_alive: "30m"
+
+frontier_model:
+  # Not used in 002 (no REF condition). Kept for harness compatibility +
+  # in case you want to add a REF_C3_T comparison later.
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  model_name: "google/gemini-2.5-flash"
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+
+# The 4 conditions for this eval.
+conditions: [C1_NT, C1_T, C3_NT, C3_T]
+ref_condition: C1   # irrelevant — no REF in conditions list
+
+# N=3 per cell. 5 problems × 4 conditions × 3 runs = 60 cells.
+n_runs: 3
+temperature: 0.2
+default_tolerance_rel: 0.01
+max_tool_turns: 8
+max_total_turns: 16
+max_concurrency: 1
+seed: 1729
+
+# Paths point at this directory's results/, leaving 001's untouched.
+# Dataset path is relative to THIS file; we reach back to 001's canonical
+# dataset rather than duplicating it.
+paths:
+  dataset: "../datasets/astrodynamics/v1.json"
+  # Each `make run` creates results/<timestamp>/. `results/latest` symlinks
+  # to the most recent successful run; `make analyze` reads that by default.
+  runs_root: "results"

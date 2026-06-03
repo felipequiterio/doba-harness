@@ -1,0 +1,29 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 2.3 (Central
+Force Motion), "Energy Equation", pp. 35-36.
+
+----------------------------------------------------------------------
+
+Energy Equation
+
+The specific kinetic energy of the orbiting body is
+
+        KE = v^2 / 2 = (r_dot)^2 / 2 + (r * theta_dot)^2 / 2        (2.15)
+
+From Exercise 2.6, we obtain the (very important) Energy Equation:
+
+        E = v^2 / 2 - mu / r = - mu / (2 * a)                       (2.20)
+
+where a denotes the semi-major axis of the conic-section orbit, v is the speed
+at radius r, and mu is the gravitational parameter of the central body.
+
+An alternate form of the Energy Equation is
+
+        ( (r_dot)^2 + (r * theta_dot)^2 ) / 2 - mu / r = - mu / (2*a)   (2.21)
+
+E is the "specific mechanical energy (of the satellite)." We usually just call
+it the "energy."
+
+Remarks:
+  1. The energy E is independent of the eccentricity e. That is, the energy
+     depends on the size of the orbit, but not on the shape of the orbit.
+  2. Fix r. As v increases, the energy increases and, therefore, a increases.

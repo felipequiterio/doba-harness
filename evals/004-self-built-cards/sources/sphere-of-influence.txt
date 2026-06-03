@@ -1,0 +1,41 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 4.5 (Celestial
+Mechanics), "Sphere of Influence", pp. 188-191.
+
+----------------------------------------------------------------------
+
+Sphere of Influence
+
+When considering the disturbed motion of one body of mass m2 in the presence
+of two bodies of mass m1 and m3, it is important for numerical computation to
+select the appropriate body to which the motion of the body of mass m2 is to
+be referred.
+
+The dividing surface is defined as the locus of points at which the ratio
+between the force with which the body of mass m3 perturbs the motion of the
+body at P2 and the force of attraction of the body of mass m1 is equal to the
+ratio between the perturbing force of the mass m1 and the force of attraction
+of the body of mass m3. It happens that the surface boundary over which these
+two ratios are equal is almost spherical if r is considerably smaller than rho.
+
+Sphere of influence (SoI) = sphere about P1 of radius
+
+        r  ~=  rho * ( m1 / m3 )^(2/5)                         (4.99)
+
+where rho denotes the distance between P1 and P3.
+
+In the typical application, P1 = a planet, P2 = a spacecraft, P3 = the Sun, and
+rho ~= the planet's orbital distance from the Sun (about 1 AU for Earth). Inside
+this sphere of influence for P1, the motion of the spacecraft at P2 is
+considered to be dominated by m1 and only perturbed by m3.
+
+The concept of sphere of influence originated with Pierre-Simon de Laplace when
+he was studying the motion of a comet that passed near Jupiter.
+
+Example (Solar system):
+
+        r_Sol ~= ( m1 / m3 )^(2/5) * rho
+              = ( 0.0304 x 10^-4 )^(2/5) * ( 1.496 x 10^8 km )
+              = 9.29 x 10^5 km
+
+(Here m1/m3 is the planet-to-Sun mass ratio and rho is the planet's mean
+distance to the Sun.)

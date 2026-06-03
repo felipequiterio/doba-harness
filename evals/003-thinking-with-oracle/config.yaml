@@ -1,0 +1,49 @@
+# 003 — thinking-with-oracle config.
+#
+# Focused 2-condition eval. Same model + sampling as 002 — only the
+# conditions list changes. `max_tokens` left at 8192 because that's enough
+# for C3 (each calculator round-trip resets the per-call budget); 002 saw
+# C3_T commit final_answer 10/10 with this setting.
+
+local_model:
+  provider: "ollama"
+  base_url: "http://localhost:11434"
+  model_name: "qwen3.5:4b"
+  api_key_env: null
+  max_tokens: 8192
+  # disable_thinking here is the DEFAULT for non-suffixed conditions. The
+  # `_T` / `_NT` suffix on the actual condition codes overrides this
+  # per-call. Kept aligned with 001 / 002 for consistency.
+  disable_thinking: true
+  extra_body:
+    # Do NOT set `think` here — see 001's config.yaml for the
+    # cautionary tale (it silently overrode per-condition toggles).
+    options:
+      num_ctx: 16384      # room for prompt + ~8K of thinking
+      num_gpu: 99
+    keep_alive: "30m"
+
+# Not used in 003 (no REF condition). Kept for harness compatibility.
+frontier_model:
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  model_name: "google/gemini-2.5-flash"
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+
+# Default condition list (used if --conditions isn't passed). The Makefile
+# always passes --conditions explicitly so this is informational.
+conditions: [C3_NT, C3_T]
+ref_condition: C1   # irrelevant — no REF in conditions
+
+n_runs: 3
+temperature: 0.2
+default_tolerance_rel: 0.01
+max_tool_turns: 8
+max_total_turns: 16
+max_concurrency: 1
+seed: 1729
+
+paths:
+  dataset: "../datasets/astrodynamics/v1.json"
+  runs_root: "results"

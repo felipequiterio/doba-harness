@@ -1,0 +1,15 @@
+{
+  "_comment": "Eval 005: each passage states the relation in NON-closed form, so building the usable card requires a real symbolic derivation (divide+simplify, or solve-for-target). purpose names the target quantity without leaking the closed form.",
+  "astro-025": {
+    "passage": "sources/flight-path-angle.txt",
+    "purpose": "computing the flight-path angle (angle between the velocity vector and the local horizontal) at a given true anomaly on a Keplerian orbit of known eccentricity"
+  },
+  "astro-037": {
+    "passage": "sources/kepler-period.txt",
+    "purpose": "computing the semi-major axis of an orbit from its orbital period and the central body's gravitational parameter mu"
+  },
+  "astro-038": {
+    "passage": "sources/energy-equation.txt",
+    "purpose": "computing the orbital speed at a given radius r on an orbit of semi-major axis a around a body of gravitational parameter mu"
+  }
+}

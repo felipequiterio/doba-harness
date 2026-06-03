@@ -1,0 +1,107 @@
+# 001-astro-failure-modes — experiment config.
+#
+# Both `local_model` and `frontier_model` use an OpenAI-compatible
+# chat-completions endpoint. Point at Ollama, vLLM, Anthropic-via-proxy,
+# OpenAI, whatever you have.
+
+local_model:
+  # `ollama` provider hits /api/chat directly instead of /v1/chat/completions.
+  # Required for Qwen3 thinking models: Ollama's OpenAI-compat shim silently
+  # drops the `think` flag and most Ollama-specific options, so the model
+  # generates `<think>…</think>` until it hits max_tokens and returns empty
+  # content. Native /api/chat respects everything below.
+  provider: "ollama"
+  base_url: "http://localhost:11434"      # no /v1 suffix
+  model_name: "qwen3.5:4b"                # `ollama pull qwen3.5:4b` first
+  api_key_env: null                       # Ollama doesn't authenticate
+  max_tokens: 4096                        # qwen3 thinking eats tokens fast — give it room
+
+  # Qwen3 ships in "thinking mode" by default. `<think>…</think>` content
+  # burns completion tokens with no FINAL_ANSWER until it closes, which on a
+  # 4B with max_tokens=2048 means runs end as no_final_answer.
+  #
+  # `true`  → append `/no_think` to the system prompt → measures the model's
+  #           direct-answer quality. Faster, fits in 8 GB cleanly.
+  # `false` → leave thinking on. Honest test of the model's reasoning, but
+  #           bump max_tokens to 8192+ and num_ctx to 12288+ if you do this.
+  disable_thinking: true
+
+  # Passed verbatim via the OpenAI SDK's `extra_body` argument. Ollama's
+  # OpenAI-compat layer reads `options{}` and `keep_alive` from the request
+  # body. These three settings are what keep an RTX 3070 (8 GB) happy:
+  #
+  #  - options.num_ctx: KV cache is allocated up-front for this window.
+  #    Qwen3's default is ~40 K, which spills to CPU RAM on 8 GB cards
+  #    (the 100% RAM + 23 tk/s slowdown you observed). 8192 fits cleanly
+  #    and is more than enough for our prompts + ~16 tool turns.
+  #  - options.num_gpu: number of layers offloaded to GPU. 99 = "all";
+  #    overrides Ollama's auto-estimate when it under-counts headroom.
+  #  - keep_alive: how long the model stays resident between requests. "30m"
+  #    avoids paying the cold-load tax across the ~200 calls in a full sweep.
+  extra_body:
+    # NOTE: `think` is NOT set here. It used to be — but a fixed value
+    # here silently overrode every per-condition `_T` toggle in eval 002,
+    # producing a run where all four conditions had thinking OFF. The
+    # client now sets `think` per-call based on `disable_thinking`
+    # threaded through conditions.run_condition. Leave it unset here.
+    options:
+      num_ctx: 8192
+      num_gpu: 99
+    keep_alive: "30m"
+
+frontier_model:
+  provider: "openrouter"               # "openai" | "anthropic" | "openrouter" — picks the client adapter
+  base_url: "https://openrouter.ai/api/v1"
+  model_name: "google/gemini-2.5-flash"
+  api_key_env: "OPENROUTER_API_KEY"    # NAME of env var; export OPENROUTER_API_KEY=sk-or-... in your shell
+  max_tokens: 2048
+
+# Conditions to run by default. Override with --conditions on the CLI.
+#   C1     local raw         (no tools, no oracle)
+#   C2     local + calc
+#   C3     local + calc + oracle
+#   REF    frontier on ref_condition prompt (default: C1) — raw ceiling
+#   REF_C3 frontier on C3 prompt — ceiling WITH oracle (mode-(b) test)
+conditions: [C1, C2, C3, REF, REF_C3]
+
+# REF (the bare ceiling) defaults to running C1 prompt on the frontier.
+# Most useful as the "what does a big model do raw?" comparison.
+ref_condition: C1
+
+# How many independent runs per (problem, condition). Variance comes from
+# temperature sampling; raise to tighten error bars.
+n_runs: 5
+
+# Temperature. 0.2 is a deliberate pick: low enough that small models stop
+# drifting, high enough that N>1 produces non-degenerate variance for
+# pass-rate estimates. Document any change here.
+temperature: 0.2
+
+# Default relative tolerance for answer scoring. Per-problem overrides win.
+default_tolerance_rel: 0.01
+
+# Max number of CALC<->RESULT round-trips before forcing the model to commit.
+# This is the lever for "stop the spiral" — keep tight.
+max_tool_turns: 8
+
+# Maximum total turns (assistant messages) in any condition, calc or no calc.
+max_total_turns: 16
+
+# Optional: cap concurrent in-flight requests. Local endpoints generally don't
+# love parallelism on a single GPU.
+max_concurrency: 1
+
+# RNG seed for any non-LLM stochasticity (sampling problem order, etc).
+seed: 1729
+
+# Paths (relative to this file's directory).
+paths:
+  # Dataset lives at the shared location evals/datasets/astrodynamics/.
+  # Relative paths resolve against THIS config file's directory.
+  dataset: "../datasets/astrodynamics/v1.json"
+
+  # Run history root. Each `make run` creates a fresh timestamped subdir:
+  #   results/2026-06-01T14-30-22/{runs.jsonl, logs/, summary.md, charts/}
+  # `results/latest` is a symlink to the most recent successful run, so
+  # `make analyze` finds it without knowing the timestamp.
+  runs_root: "results"

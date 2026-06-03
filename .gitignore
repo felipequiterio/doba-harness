@@ -1,0 +1,31 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+uv.lock
+
+# Node / TS (future product tracks)
+node_modules/
+dist/
+.turbo/
+
+# Eval outputs — large, regenerable; each run lives under results/<timestamp>/.
+# (evals/.gitignore also covers this; kept here as a backstop.)
+**/results/*
+!**/results/.gitkeep
+
+# Copyrighted source material — the Hintz textbook is referenced by the evals
+# but must NOT be committed (copyright + 17 MB). The dataset (v1.json) and the
+# transcribed source passages in sources/ are the derived artifacts we keep.
+*.pdf
+
+# Local machine config / secrets
+.claude/settings.local.json
+.env
+.env.*
+*.local
+
+# OS cruft
+.DS_Store
+Thumbs.db

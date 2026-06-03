@@ -1,0 +1,15 @@
+{
+  "_comment": "Maps each eval-004 problem to the source passage the 4B reads and the 'purpose' (retrieval key) it builds a card for. Passage paths are relative to this file. The purpose names the target quantity WITHOUT leaking the problem's specific numbers — it stands in for the topic key a real Learning Loop would index the card under.",
+  "astro-016": {
+    "passage": "sources/sphere-of-influence.txt",
+    "purpose": "computing the radius of a planet's sphere of influence (SOI) with respect to the Sun, given the planet's heliocentric distance and the planet-to-Sun mass ratio"
+  },
+  "astro-025": {
+    "passage": "sources/flight-path-angle.txt",
+    "purpose": "computing the flight-path angle (angle between the velocity vector and the local horizontal) at a given true anomaly on a Keplerian orbit of known eccentricity"
+  },
+  "astro-027": {
+    "passage": "sources/hyperbolic-turn-angle.txt",
+    "purpose": "computing the total turn (deflection) angle between the incoming and outgoing asymptotes of a hyperbolic flyby, given the hyperbolic excess velocity and the periapsis radius"
+  }
+}

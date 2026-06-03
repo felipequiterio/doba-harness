@@ -1,0 +1,32 @@
+[project]
+name = "doba-evals"
+version = "0.2.0"
+description = "Doba evaluation framework — shared harness in lib/, datasets in datasets/, individual experiments in NNN-*/ folders."
+requires-python = ">=3.11"
+
+# `openai` covers Ollama + OpenRouter + OpenAI (they all speak the OpenAI
+# chat-completions protocol). `anthropic` is for Claude. Stub runs need neither.
+dependencies = [
+    "anthropic>=0.34",
+    "matplotlib>=3.5",
+    "numpy>=1.21",
+    "openai>=1.0",
+    "pyyaml>=6.0",
+    "sympy>=1.12",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# Make lib/, datasets/, tests/ importable from the evals/ root without an
+# editable install. `pythonpath = ["."]` adds the evals/ directory to
+# sys.path at pytest startup.
+pythonpath = ["."]

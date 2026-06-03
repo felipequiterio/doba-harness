@@ -1,0 +1,29 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 2.4 (Position
+Versus Time in an Elliptical Orbit), "Proving Kepler's Laws from Newton's
+Laws", pp. 49-50.
+
+----------------------------------------------------------------------
+
+Proving Kepler's Laws from Newton's Laws
+
+Integrating the equations of motion over one full revolution leads to Kepler's
+Equation. Setting the eccentric anomaly E = 2*pi in Kepler's Equation (one
+complete orbit), we obtain the orbital period tau:
+
+        tau = 2 * pi * sqrt( a^3 / mu )                            (2.34)
+
+This equation proves Kepler's Third Law, which states that
+
+        tau^2  is proportional to  (mean radius)^3
+
+where a is the semi-major axis of the orbit and mu is the gravitational
+parameter (mu = G*M) of the central body.
+
+Def.: The mean motion (average angular velocity) is
+
+        n = sqrt( mu / a^3 )                                       (2.35)
+
+The mean motion is 2*pi / tau in radians per second.
+
+(For Kepler, a = (r_p + r_a)/2, the average of the periapsis and apoapsis
+radii. Reference: Prussing, 1977.)

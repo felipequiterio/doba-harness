@@ -1,0 +1,44 @@
+# 004 — self-built knowledge cards.
+#
+# Same model + sampling as 002/003. Two thinking regimes by step:
+#   - SOLVE  step (apply the card): no-think — these are single-formula
+#     problems, where 003 showed no-think wins and is cheaper.
+#   - BUILD  step (read passage -> card): thinking ON — extraction /
+#     interpretation is a reasoning task.
+
+local_model:
+  provider: "ollama"
+  base_url: "http://localhost:11434"
+  model_name: "qwen3.5:4b"
+  api_key_env: null
+  max_tokens: 8192
+  disable_thinking: true        # SOLVE step default → no-think
+  extra_body:
+    options:
+      num_ctx: 16384
+      num_gpu: 99
+    keep_alive: "30m"
+
+# Card-construction step overrides.
+card_build:
+  disable_thinking: false       # BUILD step → thinking ON
+  max_tokens: 8192
+
+# Not used in 004 (no REF, no judge). Kept for harness compatibility.
+frontier_model:
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  model_name: "google/gemini-2.5-flash"
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+
+n_runs: 3
+temperature: 0.2
+default_tolerance_rel: 0.01
+max_tool_turns: 8
+max_total_turns: 16
+seed: 1729
+
+paths:
+  dataset: "../datasets/astrodynamics/v1.json"
+  runs_root: "results"
