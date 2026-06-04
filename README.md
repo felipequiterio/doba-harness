@@ -123,12 +123,12 @@ Response / action
 | **2. Single agent + sub-tasks** | one persistent loop; isolated ephemeral sub-tasks | not yet tested |
 | **3. Memory** (2 namespaces, typed cards) | recall is conditional/agent-decided; tiny auto-inject | ✅ typed cards + conditional injection confirmed; real retrieval routing partly tested (006) |
 | **4. Tools** (tiered) | <10 core; toolboxes on demand | not tested at scale; tool-call counting is a hard rule |
-| **5. Learning Loop** (the load-bearing one) | the agent *builds* its world model | ✅ **ingest gate passed** (004/005); full pipeline + graph + forgetting still to build |
+| **5. Learning Loop** (the load-bearing one) | the agent *builds* its world model | ✅ **ingest validated** — single cards (004), derivation (005), multi-card sets (007); full online pipeline + graph + forgetting still to build |
 
-The validated surface is knowledge-**application** and the **production** of
-single cards. The open surface — most of the Learning Loop and retrieval at
-scale, cross-domain transfer, the daily-life half — is what the remaining evals
-and the build phases address.
+The validated surface now covers both knowledge-**application** and the
+**production** of cards (single and multi-card). The open surface — the *online*
+Learning Loop (graph, forgetting), retrieval at scale, cross-domain transfer,
+and the daily-life half — is what the remaining evals and build phases address.
 
 ---
 
@@ -148,6 +148,7 @@ truth. Findings (full per-eval detail in
 | **004** *(the gate)* | Can the 4B build its **own** cards? | **Yes** — recovers the oracle lift, leakage-free, and even *synthesizes* a closed form the passage never stated → Learning Loop is viable |
 | **005** | Does a symbolic (CAS) tool help derivation? | Derivation is **~100% correct in-head**; the CAS isn't needed at this difficulty (kept as an offline validator) |
 | **006** | How good must retrieval be? | Generic distractor noise is **harmless**; **near-miss** (sibling-concept) cards are the real risk, and they bite via the *selection* step |
+| **007** | Can it build a **multi-card** set and compose it? | **Yes** — builds correct 4–8-card sets that it composes *better* than terse hand cards; **card clarity beats canonical-ness** (a composed "official" formula misled the model where its own granular cards didn't) |
 
 Two refinements to the original thesis fell out of this: **conditional
 injection** (retrieve only when needed) and **conditional thinking** (deliberate

@@ -1,0 +1,39 @@
+# 007 — multi-card building. These are MULTI-STEP problems, so unlike 004/005/006
+# the SOLVE step runs thinking ON (003: thinking is +24pp on multi-step). The
+# BUILD step thinks too (extraction is reasoning). Higher token budget because
+# thinking + a multi-card composition needs room.
+
+local_model:
+  provider: "ollama"
+  base_url: "http://localhost:11434"
+  model_name: "qwen3.5:4b"
+  api_key_env: null
+  max_tokens: 16384            # multi-step + thinking → more room (003 lesson)
+  disable_thinking: false      # SOLVE step → thinking ON (multi-step)
+  extra_body:
+    options:
+      num_ctx: 24576
+      num_gpu: 99
+    keep_alive: "30m"
+
+card_build:
+  disable_thinking: false      # BUILD step → thinking ON
+  max_tokens: 12288
+
+frontier_model:                # unused; kept for harness compat
+  provider: "openrouter"
+  base_url: "https://openrouter.ai/api/v1"
+  model_name: "google/gemini-2.5-flash"
+  api_key_env: "OPENROUTER_API_KEY"
+  max_tokens: 4096
+
+n_runs: 3
+temperature: 0.2
+default_tolerance_rel: 0.01
+max_tool_turns: 12             # multi-card compositions take more calculator calls
+max_total_turns: 24
+seed: 1729
+
+paths:
+  dataset: "../datasets/astrodynamics/v1.json"
+  runs_root: "results"

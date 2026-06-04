@@ -1,0 +1,19 @@
+{
+  "_comment": "Eval 007: multi-step transfer problems whose passage describes the METHOD and the building-block formulas (circular speed, vis-viva, transfer semi-major). The model must build the whole multi-card set and compose it. purpose names the target without giving the composed answer.",
+  "astro-005": {
+    "passage": "sources/hohmann.txt",
+    "purpose": "computing the total delta-v of a Hohmann transfer between two coplanar circular orbits, given the inner and outer orbit altitudes"
+  },
+  "astro-014": {
+    "passage": "sources/hohmann.txt",
+    "purpose": "computing the total delta-v of a Hohmann transfer between two coplanar circular orbits, given the inner and outer orbit altitudes"
+  },
+  "astro-028": {
+    "passage": "sources/bi-elliptic.txt",
+    "purpose": "computing the total delta-v of a bi-elliptic transfer between two coplanar circular orbits via an intermediate apoapsis radius"
+  },
+  "astro-035": {
+    "passage": "sources/transfer-comparison.txt",
+    "purpose": "computing the minimum total delta-v to transfer between two coplanar circular orbits, choosing the cheaper of a Hohmann and a bi-elliptic transfer"
+  }
+}

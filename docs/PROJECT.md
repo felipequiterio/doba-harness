@@ -181,14 +181,20 @@ lesson that *did* land: tool invocations must be structurally countable
 agent has the same capability on day 100 as day 1, plus clutter. With it,
 every interaction deepens the world model.
 
-**Eval status — UNTESTED, and this is the crux.** The oracle *replaced* this
-entire pillar with a human-authored output. The +30 pp lift proves that *if*
-a perfect card exists in memory, the small model can use it — it says
-**nothing** about whether the 4B can *build* that card from raw source text
-(understand → interpret → integrate), whether self-built cards recover the
-same lift, or whether forgetting helps or hurts. **This is the single most
-important thing left to validate**, because it's the difference between "the
-agent gets smarter over time" being a mechanism and being an aspiration.
+**Eval status — INGEST HALF VALIDATED (gate passed); full pipeline still to
+build.** This was the crux, and evals 004/005/007 answered it. The 4B **can
+build its own cards** from a source passage and recover the oracle lift, leakage-
+free (**004**, the gate); it **derives** unstated closed forms reliably in-head,
+no CAS needed (**005**); and it builds correct **multi-card sets** for multi-step
+problems and composes them at least as well as hand cards (**007**). One
+sharp refinement fell out: **card *clarity* beats *canonical-ness*** — a terse
+human-authored composed formula can *mislead* the small model where its own
+granular decomposition doesn't, so the Learning Loop should favour granular,
+clearly-named cards. **Still untested:** the *online* pipeline (graph
+integration, consolidation) and **forgetting**. The headline risk has moved from
+"can it build knowledge?" (answered: yes) to harness robustness (a thinking-loop
+token runaway recurred in 005/007) and composition depth at the reasoning
+ceiling. (Detailed per-eval record: `PROJECT_PLAN.md` §9.)
 
 ---
 
@@ -201,17 +207,21 @@ agent gets smarter over time" being a mechanism and being an aspiration.
 | Recall should be conditional / agent-decided | **Confirmed & elevated** (−10 pp when over-injected) | 001 |
 | A reasoning-depth ceiling exists | **Confirmed** (`astro-031` 0/3) | 003 |
 | ReAct keeps small-model calls short and correct | **Confirmed** | 001 |
-| The agent can *build* its own knowledge (Learning Loop) | **UNTESTED** | — |
-| Real retrieval finds the right card among distractors | **UNTESTED** | — |
+| The agent can *build* its own knowledge (Learning Loop ingest) | **Confirmed** — single cards (004), derivation (005), multi-card sets (007); favours *granular* cards | 004/005/007 |
+| The 4B can *derive* unstated formulas (no CAS needed) | **Confirmed** (~100% in-head) | 005 |
+| Real retrieval survives distractors | **Partly confirmed** — generic noise harmless; *near-miss* sibling-concept cards are the real risk, via selection | 006 |
 | Cross-domain transfer (graph traversal surfaces analogies) | **UNTESTED** | — |
 | Forgetting/pruning improves the knowledge layer | **UNTESTED** | — |
 | Tiered tools beat all-tools-in-context at scale | **UNTESTED** | — |
 | Sub-task context isolation works | **UNTESTED** | — |
 | The daily-life assistant half works end-to-end | **UNTESTED** | — |
 
-The pattern is clear: **the knowledge-*application* sub-problem is well
-validated under an oracle; the knowledge-*production* and *retrieval-routing*
-sub-problems — i.e. most of the Learning Loop and Memory pillars — are not.**
+The pattern has shifted: **knowledge-*application* and knowledge-*production*
+(the Learning Loop's ingest half) are now both validated under the research
+evals**; what remains open is the *online* pipeline (graph, forgetting),
+retrieval *at scale*, cross-domain transfer, and the entire daily-life half.
+The blocking risks are now harness robustness (the thinking-loop runaway) and
+composition depth, not "can the agent build knowledge?"
 
 ---
 
@@ -241,6 +251,14 @@ the ingestion pipeline.
 ---
 
 ## 7. Next evals (the validation roadmap)
+
+> **Note (post-007):** this section is the *original* planned roadmap, written
+> before execution. The evals were built in a different order and the numbers
+> diverged (the actual research evals are `001`–`007`: oracle/thinking, then
+> self-built cards, symbolic derivation, distractor retrieval, multi-card
+> building). **The authoritative, up-to-date eval record is
+> [`PROJECT_PLAN.md` §9](PROJECT_PLAN.md).** What follows is kept for the
+> *reasoning* behind each test; ignore the eval numbers here.
 
 The through-line: the oracle proved the *ceiling*. The next evals test
 whether the real system can *reach* it. Ordered by how much each de-risks the

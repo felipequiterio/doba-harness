@@ -1,0 +1,45 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 3.4 (Orbit
+Transfer and Adjustment), "Bi-elliptic Transfer", pp. 75-76. Method summary.
+
+----------------------------------------------------------------------
+
+Bi-elliptic Transfer (three-burn transfer between two coplanar circular orbits)
+
+A bi-elliptic transfer moves a spacecraft from an inner circular orbit of radius
+r1 to an outer circular orbit of radius r2 by way of an intermediate apoapsis
+radius r_b that lies beyond the outer orbit (r_b > r2). It uses two transfer
+ellipses and three burns.
+
+  - First transfer ellipse: periapsis at r1, apoapsis at r_b.
+        a_t1 = (r1 + r_b) / 2
+  - Second transfer ellipse: periapsis at r2, apoapsis at r_b.
+        a_t2 = (r2 + r_b) / 2
+
+The three impulsive burns are:
+
+  Burn 1 (at r1):  inner circular speed  ->  first ellipse periapsis speed.
+  Burn 2 (at r_b): first ellipse apoapsis speed -> second ellipse apoapsis speed.
+  Burn 3 (at r2):  second ellipse periapsis speed -> outer circular speed.
+
+Building-block formulas:
+
+  - Circular-orbit speed at radius r:
+        v_c = sqrt( mu / r )
+
+  - Speed on any orbit at radius r, given semi-major axis a (vis-viva):
+        v = sqrt( mu * (2/r - 1/a) )
+
+The three burn magnitudes are the speed differences at each point:
+
+        dv1 = v(r1,  a_t1) - v_c(r1)
+        dv2 = v(r_b, a_t2) - v(r_b, a_t1)
+        dv3 = v_c(r2)      - v(r2,  a_t2)
+
+and the total cost is
+
+        dv_total = dv1 + dv2 + dv3
+
+where mu is the gravitational parameter, r1 the inner radius, r2 the outer
+radius, and r_b the intermediate apoapsis radius. For large r2/r1 the
+bi-elliptic transfer can cost less total dv than a Hohmann transfer, at the
+expense of a longer transfer time.

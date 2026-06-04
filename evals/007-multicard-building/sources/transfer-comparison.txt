@@ -1,0 +1,38 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 3.4 (Orbit
+Transfer and Adjustment), "Hohmann" and "Bi-elliptic Transfer" + the comparison
+example, pp. 72-77. Method summary.
+
+----------------------------------------------------------------------
+
+Comparing a Hohmann transfer and a bi-elliptic transfer
+
+To move between two coplanar circular orbits (inner radius r1, outer radius r2)
+there are two candidate maneuvers; the cheaper one wins.
+
+Shared building-block formulas:
+
+  - Circular-orbit speed at radius r:        v_c = sqrt( mu / r )
+  - Vis-viva speed at radius r on an orbit of semi-major axis a:
+        v = sqrt( mu * (2/r - 1/a) )
+
+Hohmann transfer (two burns). Transfer ellipse tangent to both circles:
+        a_t = (r1 + r2) / 2
+        dv1 = v(r1, a_t) - v_c(r1)
+        dv2 = v_c(r2)    - v(r2, a_t)
+        dv_hohmann = dv1 + dv2
+
+Bi-elliptic transfer (three burns) via an intermediate apoapsis r_b > r2:
+        a_t1 = (r1 + r_b) / 2
+        a_t2 = (r2 + r_b) / 2
+        dv1 = v(r1,  a_t1) - v_c(r1)
+        dv2 = v(r_b, a_t2) - v(r_b, a_t1)
+        dv3 = v_c(r2)      - v(r2,  a_t2)
+        dv_bielliptic = dv1 + dv2 + dv3
+
+The minimum-cost transfer is
+
+        dv_min = min( dv_hohmann, dv_bielliptic )
+
+For small radius ratios r2/r1 the Hohmann transfer is cheaper; for large ratios
+the bi-elliptic can win. mu is the gravitational parameter, r1 the inner radius,
+r2 the outer radius, r_b the intermediate apoapsis radius.

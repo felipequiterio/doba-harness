@@ -229,14 +229,24 @@ def check_formula(equation_str: str, spec: EquivSpec, *, n_probes: int = 12,
             continue
         return FormulaCheck("unmapped", f"symbol {s.name!r} maps to no input/constant role")
 
+    # Probe at random points where the canonical is DEFINED. Resample past
+    # domain points where canonical is undefined (e.g. vis-viva needs r < 2a)
+    # so an undefined point isn't miscounted as a non-match. Require all valid
+    # points to agree.
     rng = random.Random(seed)
     passed = 0
-    for _ in range(n_probes):
+    valid = 0
+    attempts = 0
+    while valid < n_probes and attempts < n_probes * 8:
+        attempts += 1
         role_vals = {role: rng.uniform(*spec.domains[role]) for role in spec.inputs}
         try:
             canon = float(spec.canonical(**role_vals, **const_value))
         except Exception:
-            continue  # skip probe points where canonical is undefined
+            continue  # canonical undefined here — not a probe point
+        if not math.isfinite(canon):
+            continue
+        valid += 1
         subs = {s: role_vals[role_for[s]] for s in role_for}
         subs.update({s: const_value[const_for[s]] for s in const_for})
         ok = False
@@ -254,8 +264,9 @@ def check_formula(equation_str: str, spec: EquivSpec, *, n_probes: int = 12,
         if ok:
             passed += 1
 
-    total = n_probes
-    if passed >= total - 0:  # all probes must match
-        return FormulaCheck("equivalent", f"matched canonical at {passed}/{total} points",
-                            passed, total)
-    return FormulaCheck("not_equivalent", f"matched only {passed}/{total} points", passed, total)
+    if valid == 0:
+        return FormulaCheck("not_equivalent", "canonical undefined across the sampled domain")
+    if passed == valid:
+        return FormulaCheck("equivalent", f"matched canonical at {passed}/{valid} valid points",
+                            passed, valid)
+    return FormulaCheck("not_equivalent", f"matched only {passed}/{valid} valid points", passed, valid)

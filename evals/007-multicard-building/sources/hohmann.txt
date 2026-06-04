@@ -1,0 +1,42 @@
+Source: Hintz, "Orbital Mechanics and Astrodynamics", Section 3.4 (Orbit
+Transfer and Adjustment), "Hohmann Transfer", pp. 72-74. Method summary.
+
+----------------------------------------------------------------------
+
+Hohmann Transfer (two-burn transfer between two coplanar circular orbits)
+
+A Hohmann transfer moves a spacecraft between an inner circular orbit of radius
+r1 and an outer circular orbit of radius r2 using an elliptical transfer orbit
+that is tangent to both. The transfer ellipse has its periapsis at r1 and its
+apoapsis at r2, so its semi-major axis is
+
+        a_t = (r1 + r2) / 2
+
+Two impulsive burns are required:
+
+  Burn 1 (at r1): raise the speed from the inner circular speed to the speed of
+  the transfer ellipse at its periapsis.
+  Burn 2 (at r2): raise the speed from the transfer ellipse's apoapsis speed to
+  the outer circular speed.
+
+Building-block formulas:
+
+  - Circular-orbit speed at radius r:
+        v_c = sqrt( mu / r )
+
+  - Speed on any orbit at radius r, given semi-major axis a (vis-viva):
+        v = sqrt( mu * (2/r - 1/a) )
+
+The two burn magnitudes are the speed differences at each tangent point:
+
+        dv1 = v(r1, a_t) - v_c(r1)        [at the inner radius]
+        dv2 = v_c(r2)    - v(r2, a_t)     [at the outer radius]
+
+and the total cost of the transfer is
+
+        dv_total = dv1 + dv2
+
+where mu is the gravitational parameter of the central body, r1 and r2 are the
+inner and outer circular radii, and a_t is the transfer-ellipse semi-major axis.
+The same two-burn structure works for an inward transfer (r2 < r1); the burns
+are decelerations but the formula dv_total = dv1 + dv2 is unchanged.

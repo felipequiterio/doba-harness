@@ -721,21 +721,49 @@ diverges from the phase-logical labels used earlier in this doc.
   card `when`/preconditions during selection** (the literal SOI-vs-Hill
   disambiguator), and **keep multiple candidates** rather than forcing one.
 
-#### `007` — multi-card / multi-step building ⏳ ON RADAR
-- **Will test:** can the 4B build a *correct multi-card chain* (e.g. bi-elliptic
-  Δv, 4 cards) from a passage and compose it? Pushes ingest to where the
-  reasoning ceiling lives — the mode-b confound (`astro-028`/`031`) must be
-  controlled so we measure *card-building*, not depth.
+#### `007` — multi-card / multi-step building ✅
+- **Tested:** can the 4B build a *correct multi-card set* (Hohmann / bi-elliptic
+  Δv, 4–5 cards) from one method passage and **compose** it? Three conditions
+  (C2 / C3_oracle / C3_self) read together to separate a *card-building* gap
+  from the reasoning *ceiling*. Two scores: the numeric answer, and SymPy
+  **coverage** of the two physics building blocks (circular speed + vis-viva).
+  Solve runs **thinking ON** (multi-step, per 003).
+- **Result:** **card-building holds at scale** — 100% building-block coverage,
+  4–8 correct cards built per problem. And the eval's own assumption inverted:
+  **C3_oracle (56%) came in *below* both C2 (67%) and C3_self (78%)**. On
+  `astro-014` the hand cards scored 1/3 with both failures committing
+  **Δv1 alone (110.9 m/s) — the model computed the first burn and stopped**,
+  *despite* an explicit `total = burn1 + burn2` card; its own 6-card granular
+  set solved it 3/3. `astro-028` (bi-elliptic) ground everything down
+  (C2/oracle/self ≈ 1/3, 1/3, 2/3) — the genuine reasoning-depth case.
+- **Expected?** The *building works* result — yes (extends 004 to multi-card).
+  The **oracle being the worst condition** was the surprise, and unlike 004/006
+  it was *real, not a scoring artifact*: a terse composed-formula card with
+  cryptic subscripts (`v_t1, v_c1, …`) **misled** the small model where its own
+  granular decomposition didn't. (Caveat: N=3; "self > oracle" is driven mainly
+  by the `astro-014` oracle collapse + small N — not a universal claim. Several
+  near-misses were tolerance-boundary, e.g. an oracle run 1.4% off.)
+- **Shaped:** for Phase 5, **card *clarity* beats *canonical-ness*** — let the
+  model build its **own granular cards**; if we author canonical cards, author
+  them **granularly (one formula, clear names)**, never as composed subscripted
+  expressions. The `astro-014` failure (computed burn 1, *forgot* burn 2) is the
+  direct mandate for **008**: decompose-then-solve can't drop a sub-step. And it
+  **confirmed the runaway-token bug recurs** (a self solve hit 32k tokens) →
+  the token/turn cap + forced-commit fix is now a blocker for thinking-on runs.
 
 #### `008` — decomposition vs the ceiling ⏳ ON RADAR
 - **Will test:** does an explicit decompose-then-solve harness crack
-  `astro-031` (0/3)? Cheap and independent; directly validates the
-  decomposition policy (build step 8).
+  `astro-031` (0/3) and stop the composition-drop failure 007 surfaced
+  (computing one burn, forgetting the rest)? Cheap and independent; directly
+  validates the decomposition policy (build step 8).
 
-**Open follow-ups logged in the runs:** re-run 004 with more genuinely-`absent`
-single-formula problems at N≥5 (the pool is thin); add token/turn caps to the
-multi-turn build loops (005's runaway); `astro-027` is too flaky (~40% base
-failure) to be a clean probe — repair or retire it.
+**Open follow-ups logged in the runs:** **(priority)** add a token/turn cap +
+forced-commit to the multi-turn thinking loops — the 32k runaway has now
+recurred in 005 *and* 007 and is blocking clean thinking-on multi-step runs;
+author multi-step oracle/canonical cards **granularly** (007 showed composed
+cards mislead); re-run 004 with more genuinely-`absent` single-formula problems
+at N≥5 (thin pool); `astro-027` is too flaky (~40% base failure) to be a clean
+probe — repair or retire it.
 
 ### 9.2 Product track (TS — on the real harness, per phase)
 
@@ -750,11 +778,15 @@ failure) to be a clean probe — repair or retire it.
 | **daily-life (full)** | 7 | Daily-life reliability | success, turns, tool errors |
 | **Longitudinal** | 8 | Does Doba get smarter over time? | day-100 vs day-1 on held-out tasks |
 
-**Critical path:** 004 (gate ✓ passed) → 006 distractor (✓ — precision matters
-vs near-misses, not card count) → 007/008 → product re-runs per phase. 004
-decided the Learning Loop is buildable; 005 said the derivation step is solid
-without a CAS; 006 said retrieval must disambiguate sibling-concept formulas,
-not just rank top-k.
+**Critical path:** 004 (gate ✓) → 005 (derivation solid ✓) → 006 (distractor ✓)
+→ 007 (multi-card ✓) → 008 → product re-runs per phase. The cumulative verdict:
+the Learning Loop's **ingest is buildable and robust** — the 4B builds correct
+single cards (004), derives reliably without a CAS (005), shrugs off generic
+retrieval noise but must disambiguate near-misses (006), and builds correct
+*multi-card* sets that it composes better than terse hand cards (007). The open
+risks have shifted from "can it build knowledge?" to **harness robustness**
+(the thinking-loop runaway) and **composition depth** (the mode-b ceiling that
+008's decomposition targets).
 
 ---
 
