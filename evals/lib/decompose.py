@@ -1,18 +1,22 @@
 """
-decompose — explicit decompose-then-solve for multi-step problems (eval 008).
+decompose — decompose-then-EXECUTE for multi-step problems (eval 008+).
 
-Instead of solving a multi-step problem in one monolithic ReAct loop, this:
-  1. PLAN  — ask the model (thinking ON) to break the problem into an ordered
-             list of SINGLE-QUANTITY sub-steps; the last one produces the answer.
-  2. EXECUTE each leaf — a focused, NO-THINK calculator solve that computes
-             exactly one quantity, with all prior results supplied as knowns.
-  3. COMPOSE — the last leaf's value is the final answer.
+Reworked after 008's first cut failed: there, the model planned *and* let
+no-think "leaf" model calls do the arithmetic, which produced garbage (a
+10-step plan returned a value 5000× too big; leaves returned None; errors
+cascaded). The plan *reasoning* was fine; the *execution* was broken.
 
-Hypothesis (003 + 007): walking every planned sub-step prevents the
-"compute one burn, forget the rest" failure that monolithic solves hit on
-multi-step transfers, and each leaf is a single-step task where no-think + the
-calculator is reliable. Knowledge is held constant (the oracle cards are given
-in both the plan and every leaf), so the only variable is the solve strategy.
+New design — the model writes a little PROGRAM, the harness runs it:
+  1. PLAN  — one model call emits an ordered list of named steps, each a
+             calculator EXPRESSION over the constants, the problem's `given`
+             values, earlier step names, and math functions.
+  2. EXECUTE — the harness evaluates each expression deterministically with the
+             calculator (no model arithmetic), threading results forward.
+  3. The last step's value is the answer.
+
+This separates "decompose correctly" (the model) from "do arithmetic"
+(the deterministic calculator), removing the garbage-leaf failure mode, and
+costs a single model call instead of one per step.
 """
 
 from __future__ import annotations
@@ -23,69 +27,46 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .calculator import Calculator, evaluate_text, extract_calc_calls
+from .calculator import Calculator, CalculatorError
 
 _PLAN_SYS = (
-    "You are decomposing a multi-step astrodynamics problem into a sequence of "
-    "SINGLE-QUANTITY sub-steps that will each be computed one at a time, in "
-    "order. You PLAN only — you do not compute any numbers here."
+    "You decompose a multi-step astrodynamics problem into a short PROGRAM: an "
+    "ordered list of named steps, each computing ONE quantity with a calculator "
+    "EXPRESSION. The system evaluates the expressions for you — you do NOT "
+    "compute any numbers yourself."
 )
 
 
-def _plan_user(statement: str, cards_block: str) -> str:
+def _plan_user(statement: str, cards_block: str, given: dict[str, Any],
+               const_names: list[str]) -> str:
+    given_lines = "\n".join(f"    {k} = {v}" for k, v in given.items()) or "    (none)"
+    consts = ", ".join(const_names)
     return (
         f"PROBLEM:\n{statement}\n\n"
         + (f"REFERENCE FORMULAS (use these):\n{cards_block}\n\n" if cards_block else "")
-        + "Break this into an ordered list of sub-steps. Each sub-step computes "
-        "EXACTLY ONE numeric quantity (e.g. \"circular speed at the inner "
-        "radius\", \"transfer-ellipse semi-major axis\", \"first burn "
-        "magnitude\"). Later steps may use the results of earlier ones. The "
-        "LAST step must produce the final answer the problem asks for, in the "
-        "requested unit.\n\n"
-        "Output ONLY a JSON array, nothing else:\n"
-        "[{\"id\": 1, \"compute\": \"<one quantity>\"}, "
-        "{\"id\": 2, \"compute\": \"<one quantity>\"}, ...]"
+        + "AVAILABLE VARIABLES for your expressions:\n"
+        f"  Given values:\n{given_lines}\n"
+        f"  Constants: {consts}\n"
+        "  Math functions: sqrt, abs, sin, cos, tan, asin, acos, atan, atan2, "
+        "exp, log, log10, pow, radians, degrees, min, max, pi, e.\n\n"
+        "Write an ordered JSON list of steps. Each step is "
+        "{\"name\": \"<short_var>\", \"expr\": \"<calculator expression>\"}. "
+        "An expression may use the given values, the constants, the math "
+        "functions, and the NAMES of any EARLIER steps. The LAST step's value "
+        "is the final answer the problem asks for.\n\n"
+        "Example shape (not the answer):\n"
+        "[{\"name\": \"r1\", \"expr\": \"R_earth + start_altitude_m\"}, "
+        "{\"name\": \"v_c1\", \"expr\": \"sqrt(mu_earth / r1)\"}, "
+        "{\"name\": \"dv_total\", \"expr\": \"dv1 + dv2\"}]\n\n"
+        "Output ONLY the JSON array — no prose, no numbers computed."
     )
-
-
-_LEAF_SYS = (
-    "You compute EXACTLY ONE quantity for a larger problem, using a calculator. "
-    "Write `CALC: <expression>` lines for arithmetic and wait for the `RESULT:`. "
-    "Do not solve the whole problem — only the one quantity asked. When you have "
-    "it, end your message with exactly one line:\n"
-    "    STEP_RESULT: <number>\n"
-    "in SI units (just the number, e.g. `7672.5`). Nothing after that line."
-)
-
-
-def _leaf_user(statement: str, cards_block: str, known_block: str, step: dict) -> str:
-    return (
-        f"PROBLEM (context only):\n{statement}\n\n"
-        + (f"REFERENCE FORMULAS:\n{cards_block}\n\n" if cards_block else "")
-        + f"KNOWN VALUES (already computed — use these, don't recompute):\n{known_block}\n\n"
-        f"COMPUTE ONLY THIS ONE QUANTITY:\n  Step {step['id']}: {step['compute']}\n\n"
-        "Use `CALC:` for the arithmetic, then end with `STEP_RESULT: <number>` (SI)."
-    )
-
-
-_STEP_RE = re.compile(
-    r"STEP_RESULT[ \t]*[:=][ \t]*([-+]?[0-9][0-9_,]*\.?[0-9]*(?:[eE][-+]?[0-9]+)?)"
-)
-_CALC_HAS = re.compile(r"^[ \t]*[-*]?[ \t]*CALC[ \t]*:", re.MULTILINE)
-
-
-def _to_float(s: str) -> Optional[float]:
-    try:
-        return float(s.replace(",", "").replace("_", ""))
-    except ValueError:
-        return None
 
 
 def _strip_think(text: str) -> str:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
 
 
-def _parse_plan(text: str) -> list[dict[str, Any]]:
+def _parse_plan(text: str) -> list[dict[str, str]]:
     t = _strip_think(text)
     fence = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", t, flags=re.DOTALL)
     if fence:
@@ -99,159 +80,118 @@ def _parse_plan(text: str) -> list[dict[str, Any]]:
         return []
     steps = []
     for i, item in enumerate(arr if isinstance(arr, list) else []):
-        if isinstance(item, dict) and item.get("compute"):
-            steps.append({"id": int(item.get("id", i + 1)), "compute": str(item["compute"])})
-        elif isinstance(item, str):
-            steps.append({"id": i + 1, "compute": item})
+        if isinstance(item, dict) and item.get("name") and item.get("expr"):
+            steps.append({"name": str(item["name"]).strip(), "expr": str(item["expr"]).strip()})
     return steps
 
 
 @dataclass
-class Leaf:
+class Step:
     id: int
-    compute: str
+    compute: str          # the step name (kept as `compute` for record compat)
+    expr: str
     value: Optional[float]
-    n_calc: int
-    text: str
+    error: Optional[str] = None
 
 
 @dataclass
 class DecompResult:
     final_text: str                 # synthetic FINAL_ANSWER line for scoring
     final_value: Optional[float]
-    plan: list[dict[str, Any]]
+    plan: list[dict[str, str]]
     plan_ok: bool
-    leaves: list[Leaf]
+    leaves: list[Step]              # the executed steps (name `leaves` for record compat)
     n_steps: int
-    n_tool_calls: int
+    n_tool_calls: int               # = expressions evaluated
     prompt_tokens: int
     completion_tokens: int
     latency_s: float
     full_trace: str
-    stopped_reason: str             # decomposed | no_answer | plan_failed | error
+    stopped_reason: str             # decomposed | no_answer | plan_failed | exec_error | error
     error: Optional[str] = None
 
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
 
-    @property
-    def tokens_per_second(self) -> float:
-        return self.completion_tokens / self.latency_s if self.latency_s > 0 and self.completion_tokens else 0.0
-
-
-@dataclass
-class _Stats:
-    prompt: int = 0
-    completion: int = 0
-    latency: float = 0.0
-    calls: int = 0
-
-
-def _execute_leaf(*, client, model_name, statement, cards_block, step, known,
-                  calc, temperature, max_tokens, max_calc_turns, disable_thinking,
-                  stats: _Stats) -> Leaf:
-    known_block = "\n".join(
-        f"  - {k.compute} = {k.value:.10g}" for k in known if k.value is not None
-    ) or "  (none yet)"
-    messages = [
-        {"role": "system", "content": _LEAF_SYS},
-        {"role": "user", "content": _leaf_user(statement, cards_block, known_block, step)},
-    ]
-    texts: list[str] = []
-    n_calc = 0
-    value: Optional[float] = None
-    prodded = False
-    for _ in range(max_calc_turns + 3):
-        resp = client.chat(model=model_name, messages=messages, temperature=temperature,
-                           max_tokens=max_tokens, disable_thinking=disable_thinking)
-        stats.prompt += resp.prompt_tokens; stats.completion += resp.completion_tokens
-        stats.latency += resp.latency_s; texts.append(resp.text)
-        messages.append({"role": "assistant", "content": resp.text})
-
-        calc_exprs = extract_calc_calls(resp.text)
-        if calc_exprs:                      # tool use wins over a same-turn STEP_RESULT
-            n_calc += len(calc_exprs); stats.calls += len(calc_exprs)
-            if n_calc > max_calc_turns:
-                messages.append({"role": "user", "content":
-                                 "Calculation cap reached — output STEP_RESULT: <number> now."})
-                resp = client.chat(model=model_name, messages=messages, temperature=temperature,
-                                   max_tokens=max_tokens, disable_thinking=disable_thinking)
-                stats.prompt += resp.prompt_tokens; stats.completion += resp.completion_tokens
-                stats.latency += resp.latency_s; texts.append(resp.text)
-                mm = _STEP_RE.search(resp.text)
-                value = _to_float(mm.group(1)) if mm else None
-                break
-            _, results_msg = evaluate_text(resp.text, calc)
-            messages.append({"role": "user", "content": results_msg})
-            prodded = False
-            continue
-
-        m = _STEP_RE.search(resp.text)
-        if m:
-            value = _to_float(m.group(1)); break
-        if prodded:
-            break
-        prodded = True
-        messages.append({"role": "user", "content":
-                         "Use `CALC: <expr>` to compute, then output `STEP_RESULT: <number>`."})
-    return Leaf(step["id"], step["compute"], value, n_calc, "\n".join(texts))
-
 
 def solve_decomposed(*, client, model_name, problem, cards_block, expected_unit,
                      calculator_extras=None, temperature=0.2,
-                     plan_max_tokens=None, leaf_max_tokens=None,
-                     plan_disable_thinking=False, leaf_disable_thinking=True,
-                     max_steps=12, max_calc_turns=6) -> DecompResult:
-    """Plan → execute each leaf → compose. Knowledge (cards_block) is given in
-    both phases so only the solve STRATEGY differs from a monolithic solve."""
-    stats = _Stats()
+                     plan_max_tokens=None, plan_disable_thinking=False,
+                     max_steps=16, retry_on_parse_fail=True) -> DecompResult:
+    """Plan a program of calculator expressions, then execute it deterministically."""
     t0 = time.monotonic()
     statement = problem["statement"]
-    calc = Calculator.default(calculator_extras)
+    given = {k: v for k, v in (problem.get("given") or {}).items() if isinstance(v, (int, float))}
+    constants = dict(calculator_extras or {})
+    # Namespace the calculator evaluates against: constants + given values
+    # (+ each step's result as we go).
+    calc = Calculator.default({**constants, **given})
+    const_names = sorted(constants.keys())
+
+    prompt_tok = compl_tok = 0
+    plan_texts: list[str] = []
+
+    def _plan_call(extra_user: Optional[str] = None):
+        nonlocal prompt_tok, compl_tok
+        msgs = [{"role": "system", "content": _PLAN_SYS},
+                {"role": "user", "content": _plan_user(statement, cards_block, given, const_names)}]
+        if extra_user:
+            msgs.append({"role": "user", "content": extra_user})
+        resp = client.chat(model=model_name, messages=msgs, temperature=temperature,
+                           max_tokens=plan_max_tokens, disable_thinking=plan_disable_thinking)
+        prompt_tok += resp.prompt_tokens; compl_tok += resp.completion_tokens
+        plan_texts.append(resp.text)
+        return _parse_plan(resp.text)
+
     try:
-        # 1. PLAN
-        pmsgs = [{"role": "system", "content": _PLAN_SYS},
-                 {"role": "user", "content": _plan_user(statement, cards_block)}]
-        presp = client.chat(model=model_name, messages=pmsgs, temperature=temperature,
-                            max_tokens=plan_max_tokens, disable_thinking=plan_disable_thinking)
-        stats.prompt += presp.prompt_tokens; stats.completion += presp.completion_tokens
-        stats.latency += presp.latency_s
-        plan = _parse_plan(presp.text)[:max_steps]
+        plan = _plan_call()
+        if not plan and retry_on_parse_fail:
+            plan = _plan_call("Output ONLY the JSON array of "
+                              "{\"name\":..., \"expr\":...} steps — nothing else.")
         plan_ok = bool(plan)
+        plan = plan[:max_steps]
         if not plan_ok:
-            plan = [{"id": 1, "compute": "the final answer the problem asks for"}]
+            return DecompResult(
+                final_text="(plan did not parse)", final_value=None, plan=[], plan_ok=False,
+                leaves=[], n_steps=0, n_tool_calls=0, prompt_tokens=prompt_tok,
+                completion_tokens=compl_tok, latency_s=time.monotonic() - t0,
+                full_trace="\n---\n".join(plan_texts), stopped_reason="plan_failed")
 
-        # 2. EXECUTE leaves
-        leaves: list[Leaf] = []
-        for step in plan:
-            leaf = _execute_leaf(
-                client=client, model_name=model_name, statement=statement,
-                cards_block=cards_block, step=step, known=leaves, calc=calc,
-                temperature=temperature, max_tokens=leaf_max_tokens,
-                max_calc_turns=max_calc_turns, disable_thinking=leaf_disable_thinking,
-                stats=stats)
-            leaves.append(leaf)
+        # EXECUTE the program deterministically.
+        steps: list[Step] = []
+        n_eval = 0
+        for i, st in enumerate(plan):
+            name, expr = st["name"], st["expr"]
+            try:
+                val = calc.eval(expr)
+                calc.names[name] = val          # make it referenceable by later steps
+                steps.append(Step(i + 1, name, expr, val))
+                n_eval += 1
+            except CalculatorError as e:
+                steps.append(Step(i + 1, name, expr, None, error=str(e)))
+            except Exception as e:
+                steps.append(Step(i + 1, name, expr, None, error=f"{type(e).__name__}: {e}"))
 
-        # 3. COMPOSE
-        final_value = leaves[-1].value if leaves else None
+        final_value = steps[-1].value if steps else None
         if final_value is None:
-            stopped = "no_answer"
-            final_text = "(no STEP_RESULT on the final leaf)"
+            stopped = "exec_error" if any(s.error for s in steps) else "no_answer"
+            final_text = "(final step did not evaluate)"
         else:
             stopped = "decomposed"
             final_text = f"FINAL_ANSWER: {final_value:.10g} {expected_unit}"
 
-        trace = "PLAN:\n" + presp.text.strip() + "\n\n" + "\n\n".join(
-            f"[step {lf.id}] {lf.compute}\n{lf.text.strip()}\n=> {lf.value}" for lf in leaves)
+        trace = ("PLAN:\n" + "\n---\n".join(plan_texts).strip() + "\n\nEXECUTION:\n"
+                 + "\n".join(f"  [{s.id}] {s.compute} = {s.expr}  =>  "
+                             f"{s.value if s.error is None else 'ERROR: ' + s.error}" for s in steps))
         return DecompResult(
-            final_text=final_text, final_value=final_value, plan=plan, plan_ok=plan_ok,
-            leaves=leaves, n_steps=len(plan), n_tool_calls=stats.calls,
-            prompt_tokens=stats.prompt, completion_tokens=stats.completion,
-            latency_s=time.monotonic() - t0, full_trace=trace, stopped_reason=stopped)
+            final_text=final_text, final_value=final_value, plan=plan, plan_ok=True,
+            leaves=steps, n_steps=len(plan), n_tool_calls=n_eval, prompt_tokens=prompt_tok,
+            completion_tokens=compl_tok, latency_s=time.monotonic() - t0,
+            full_trace=trace, stopped_reason=stopped)
     except Exception as e:
         return DecompResult(
             final_text=f"(error: {e})", final_value=None, plan=[], plan_ok=False,
-            leaves=[], n_steps=0, n_tool_calls=stats.calls, prompt_tokens=stats.prompt,
-            completion_tokens=stats.completion, latency_s=time.monotonic() - t0,
-            full_trace="", stopped_reason="error", error=repr(e))
+            leaves=[], n_steps=0, n_tool_calls=0, prompt_tokens=prompt_tok,
+            completion_tokens=compl_tok, latency_s=time.monotonic() - t0,
+            full_trace="\n---\n".join(plan_texts), stopped_reason="error", error=repr(e))

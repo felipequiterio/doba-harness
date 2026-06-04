@@ -144,11 +144,12 @@ truth. Findings (full per-eval detail in
 |---|---|---|
 | **001** | Is failure missing *knowledge* or *reasoning depth*? | Oracle adds **+30pp** where the model doesn't know; a tool+oracle 4B **beats the raw frontier**; over-injecting known topics **hurts −10pp** |
 | **002** | Does `<think>` mode help? | It **hurts** the bare model (gets stuck without a tool round-trip); and a suspected reasoning "ceiling" turned out to be a **token-budget** limit |
-| **003** | Does thinking pay *with* the oracle? | The effect **flips by structure: +24pp multi-step / −22pp single-step**; one problem is a genuine 0/3 reasoning ceiling |
+| **003** | Does thinking pay *with* the oracle? | The effect **flips by structure: +24pp multi-step / −22pp single-step**; one problem *looked* like a 0/3 reasoning ceiling (later overturned — see 008) |
 | **004** *(the gate)* | Can the 4B build its **own** cards? | **Yes** — recovers the oracle lift, leakage-free, and even *synthesizes* a closed form the passage never stated → Learning Loop is viable |
 | **005** | Does a symbolic (CAS) tool help derivation? | Derivation is **~100% correct in-head**; the CAS isn't needed at this difficulty (kept as an offline validator) |
 | **006** | How good must retrieval be? | Generic distractor noise is **harmless**; **near-miss** (sibling-concept) cards are the real risk, and they bite via the *selection* step |
 | **007** | Can it build a **multi-card** set and compose it? | **Yes** — builds correct 4–8-card sets that it composes *better* than terse hand cards; **card clarity beats canonical-ness** (a composed "official" formula misled the model where its own granular cards didn't) |
+| **008** | Does decomposition crack the "ceiling"? | **There is no ceiling** — `astro-031`, the cited 0/3 wall, solves **3/3** at adequate budget+turns; every "reasoning ceiling" was a **truncation/runaway** artifact. (Decomposition itself: *unproven* — the first harness was broken.) The real bottleneck is **harness budget + caps**, not reasoning depth |
 
 Two refinements to the original thesis fell out of this: **conditional
 injection** (retrieve only when needed) and **conditional thinking** (deliberate
@@ -167,7 +168,7 @@ Phase 0  Foundations & decisions        (stack locked, framework spike)
 Phase 1  Harness skeleton + MVP assistant         [gate: parity with 001–003]
 Phase 2  Personal memory + tiered tools           [gate: daily-life slice]
 Phase 3  Retrieval + conditional injection        [gate: 004 + 006 on real retrieval]
-Phase 4  Decomposition + reasoning-depth handling [gate: crack the ceiling]
+Phase 4  Harness caps (budget/turn/runaway) + reworked decomposition [gate: hard multi-step reliable]
 Phase 5  Learning Loop (full) + forgetting        [gate: pruning helps]   (only if 004 passed ✓)
 Phase 6  Cross-domain transfer + graph traversal  [gate: graph beats flat → graph-DB decision]
 Phase 7  Jarvis capabilities (computer/terminal/browser)

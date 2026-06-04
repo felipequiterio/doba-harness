@@ -18,12 +18,12 @@ local_model:
     keep_alive: "30m"
 
 decompose:
+  # Reworked (post first-008): the model emits a PLAN of calculator
+  # expressions; the harness executes them DETERMINISTICALLY (no leaf model
+  # calls — that was the garbage-leaf bug). Only the plan call hits the model.
   plan_disable_thinking: false # PLAN → thinking ON (reason about structure)
-  leaf_disable_thinking: true  # LEAVES → no-think (single-step calc)
   plan_max_tokens: 8192
-  leaf_max_tokens: 4096
-  max_steps: 12
-  max_calc_turns: 6
+  max_steps: 16
 
 frontier_model:                # unused; kept for harness compat
   provider: "openrouter"
@@ -37,6 +37,10 @@ temperature: 0.2
 default_tolerance_rel: 0.01
 max_tool_turns: 12
 max_total_turns: 24
+# Caps the thinking-loop runaway: when cumulative completion tokens hit this,
+# the harness forces one clean no-think commit. A legit astro-031 mono solve
+# used ~17k; the runaways were 26-37k, so 24k bounds them with headroom.
+max_completion_tokens: 24000
 seed: 1729
 
 paths:

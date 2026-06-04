@@ -64,7 +64,7 @@ Five findings, each with a design consequence:
 | # | Finding | Evidence | Consequence |
 |---|---|---|---|
 | 1 | **Missing-knowledge is a real, large failure mode** (mode-a) | Oracle adds **+30 pp** over calculator-alone on problems the model demonstrably doesn't know | The knowledge layer is worth building — retrieval pays |
-| 2 | **A reasoning-depth ceiling is real too** (mode-b) | `astro-031` (combined plane-change) fails **0/3 under the oracle, both thinking and no-think** | Retrieval alone is not enough; **decomposition** is required for deep problems |
+| 2 | **No genuine reasoning ceiling found** (mode-b *unconfirmed*) | Every "ceiling" exemplar fell to budget + tool-turns: `astro-028` recovered at 8192 tokens (002), and `astro-031` — long cited as the hard 0/3 wall — went **3/3** at 16k tokens + a higher tool-turn cap (008). The wall was a **truncation/turn-cap** artifact each time | The bottleneck is **harness budget/turns + the thinking-loop runaway**, not reasoning depth; decomposition's motivation is weaker than thought |
 | 3 | **Frontier models *also* need retrieval** | Oracle adds **+30 pp** to the frontier too, on the same axis | The knowledge layer is a *differentiator*, not a crutch for being small |
 | 4 | **Indiscriminate knowledge injection hurts** | On problems the model *already* knows, the oracle costs **−10 pp** | Retrieve *conditionally* — gate on whether the model already knows |
 | 5 | **Thinking mode flips sign by problem structure** | `<think>` is **+24 pp on multi-step / −22 pp on single-step**, at ~1.9× token cost | Deliberation is a *gated* spend, like retrieval — on for deep, off for shallow |
@@ -76,10 +76,14 @@ Two methodological lessons that shape the harness:
   intermediates. Every tool invocation must be structurally distinct in the
   trace, and the harness must *count* it. Trust no claim of tool use you
   didn't count.
-- **Separate truncation from reasoning failure.** `astro-028` looked like a
-  hard reasoning wall (0/10) until the token budget was doubled, at which
-  point it recovered to 3/3. Always rule out *running out of tokens* before
-  concluding *can't reason*.
+- **Separate truncation from reasoning failure.** This one bit *three times*:
+  `astro-028` looked like a 0/10 wall until the token budget doubled (002);
+  `astro-031` looked like a 0/3 wall until the budget went to 16k and the
+  tool-turn cap was raised (008). Every apparent "reasoning ceiling" in this
+  dataset has been a token/turn limit. Always rule out *running out of tokens
+  or turns* before concluding *can't reason* — and **cap the thinking loop**,
+  because the opposite failure (a 30k+-token runaway that never commits) is the
+  *actual* recurring bug (005/007/008).
 
 The unifying refinement to draft 1: **spend extra context only when it
 pays.** Retrieve only when the model doesn't already know; deliberate only
@@ -128,12 +132,16 @@ when the agent judges a task needs it.
 - The ReAct + calculator loop worked: forcing real tool round-trips made
   traces *shorter and more correct* on multi-step problems, exactly as draft
   1 predicted ("shape every call into the kind small models are good at").
-- **Promotion:** planning/decomposition moves from *optional* to *default
-  for deep tasks*. The `astro-031` 0/3 result shows no amount of retrieval
-  or deliberation substitutes for breaking a deep problem into steps. Add a
-  `decompose_problem` affordance, not just `make_plan`. (Bonus: each leaf of
-  a decomposed problem is a single-step task → run it no-think and cheap,
-  per finding #5.)
+- **Promotion (with a caveat).** Planning/decomposition was promoted to
+  *default for deep tasks* on the strength of the `astro-031` 0/3 "ceiling" —
+  but **008 overturned that**: `astro-031` solves 3/3 with adequate budget +
+  tool-turns, so there's no ceiling for decomposition to *crack*. A first-cut
+  decompose-then-solve harness also *underperformed* the monolithic solve (a
+  broken-leaf execution, not a clean test). So decomposition is **demoted from
+  "evidence-backed default" to "unproven"** — its remaining motivation is
+  reliability/cost (no-think leaves, no dropped sub-steps), not cracking a
+  ceiling. The higher-priority, evidence-backed fix is the **harness budget +
+  tool-turn cap + thinking-runaway cap** (008's real lesson).
 
 ### Pillar 2 — Single agent + ephemeral sub-tasks
 **Design (unchanged):** one persistent agent; isolated ephemeral sub-tasks
@@ -205,7 +213,8 @@ ceiling. (Detailed per-eval record: `PROJECT_PLAN.md` §9.)
 | Small model + structured knowledge in context beats raw frontier | **Confirmed** (75% vs 60%) | 001 |
 | Structured typed cards are the right knowledge unit | **Confirmed** (+30 pp vs paragraph-RAG would give) | 001 |
 | Recall should be conditional / agent-decided | **Confirmed & elevated** (−10 pp when over-injected) | 001 |
-| A reasoning-depth ceiling exists | **Confirmed** (`astro-031` 0/3) | 003 |
+| A reasoning-depth ceiling exists | **Not confirmed** — `astro-031` (cited as the 0/3 wall) solved **3/3** at adequate budget+turns; no genuine ceiling found | 003 → overturned by 008 |
+| The real failure mode on "hard" multi-step is *truncation/runaway*, not depth | **Confirmed** — apparent ceilings = token/turn limits (002/008); a 30k+-token thinking runaway is the recurring bug | 002/005/007/008 |
 | ReAct keeps small-model calls short and correct | **Confirmed** | 001 |
 | The agent can *build* its own knowledge (Learning Loop ingest) | **Confirmed** — single cards (004), derivation (005), multi-card sets (007); favours *granular* cards | 004/005/007 |
 | The 4B can *derive* unstated formulas (no CAS needed) | **Confirmed** (~100% in-head) | 005 |
@@ -235,8 +244,9 @@ composition depth, not "can the agent build knowledge?"
 5. -  Personal memory: episodic vectors + semantic graph
 6. -  Offline ingestion + flat retrieval + calculator  ← EVIDENCE-CLEARED, build it
 7. -  Knowledge probe + conditional injection          ← ELEVATED to v1 (over-injection hurts)
-8. -  Decomposition / planning by default              ← from astro-031 ceiling
+8. -  Harness budget + tool-turn + thinking-runaway cap ← EVIDENCE-CLEARED (008): the real bottleneck on "hard" problems
 9. -  Structure-gated thinking mode                    ← from finding #5 (cheap; toggle already exists)
+   -  Decomposition / planning                         ← DEMOTED to unproven (no ceiling to crack; first harness underperformed)
 10. - Knowledge graph + Learning Loop (the big one)    ← MUST be eval-gated first (§7, eval 004)
 11. - Toolboxes + computer use (Jarvis capabilities)
 12. - Cross-domain transfer / graph traversal          ← gated on its own eval (§7, eval 007)
@@ -320,13 +330,18 @@ the gate: it decides whether the Learning Loop is buildable as designed.
 ## 8. The honest one-paragraph summary
 
 Draft 1's vision is intact and its central bet — small model + structured
-knowledge beats raw frontier — is now backed by numbers, *for the
-knowledge-application half*. A 4B with a perfect card in context beats the
-bare frontier, knowledge injection should be conditional (over-injecting
-hurts), deliberation should be gated on problem depth, and a real reasoning
-ceiling exists that only decomposition addresses. But everything proven so
-far rode on an **oracle** that stood in for the Learning Loop and the
-retrieval system. The defining question of the project — *can the agent
-build and retrieve its own structured knowledge well enough to reach that
-ceiling?* — is exactly what the next evals (004 first) must answer before the
-Learning Loop is worth building at scale.
+knowledge beats raw frontier — is now backed by numbers. A 4B with the right
+card in context beats the bare frontier; knowledge injection should be
+conditional (over-injecting hurts); deliberation should be gated on problem
+structure. And the defining question — *can the agent build its own structured
+knowledge?* — has been answered **yes**: the 4B builds correct single cards
+(004), derives unstated formulas without a CAS (005), survives retrieval noise
+but must dodge near-misses (006), and builds multi-card sets it composes better
+than terse hand cards (007). Two beliefs were overturned along the way: there
+is **no genuine reasoning ceiling** (every "wall" was a token/turn-cap
+artifact — 008), and decomposition is **unproven** (its first harness was
+broken, and with no ceiling its motivation is now reliability, not depth). The
+real remaining risk is **harness robustness** — a thinking-loop token runaway
+and the budget/turn caps are what actually decide the hard multi-step problems.
+What's still untested is the *online* Learning Loop (graph, forgetting),
+retrieval at scale, cross-domain transfer, and the entire daily-life half.

@@ -4,37 +4,46 @@
 
 007 showed monolithic solves **drop sub-steps** on multi-step transfers
 (`astro-014`: computed burn 1, *forgot* burn 2 — even with a "total = burn1 +
-burn2" card). 001–003 found a real reasoning ceiling (`astro-031`, 0/3). So:
-**does an explicit decompose-then-solve harness add any value on the hard
-multi-step problems** — bi-elliptic, the small Hohmann, the combined-plane-
-change wall?
+burn2" card). So: **does an explicit decompose-then-solve harness add value on
+the hard multi-step problems** — bi-elliptic, the small Hohmann, the
+combined-plane-change problem? Knowledge is held **constant** (oracle cards in
+both conditions); the *only* variable is the solve strategy.
 
-Knowledge is held **constant** (the oracle cards are present in both
-conditions). The *only* variable is the solve strategy.
+> **First-run findings (see `PROJECT_PLAN.md` §9):** two things, one humbling.
+> **(1)** `astro-031` — long cited as the 0/3 "reasoning ceiling" — solved
+> **mono 3/3** at a 16k budget + a higher tool-turn cap. There is **no genuine
+> ceiling**; every "wall" was a token/turn artifact. **(2)** The first
+> decomposition harness was *broken* (no-think leaves did the arithmetic and
+> produced garbage), so its −56pp was an artifact, not a verdict. This eval was
+> then **reworked** (below) and the harness given a **token-runaway cap**.
 
 ## Conditions
 
 | Condition | How it solves |
 |---|---|
-| `mono`   | one monolithic ReAct loop, oracle cards, **thinking ON** (= 007's C3_oracle; how it's done now) |
-| `decomp` | **plan → execute each leaf → compose** (`lib/decompose.py`) |
+| `mono`   | one monolithic ReAct loop, oracle cards, **thinking ON**, with a completion-token cap (= 007's C3_oracle, runaway-capped) |
+| `decomp` | **plan a program of expressions → execute deterministically** (`lib/decompose.py`) |
 
-**Decompose-then-solve:**
-1. **Plan** (thinking ON) — the model breaks the problem into an ordered list of
-   *single-quantity* sub-steps; the last produces the answer. (Plans only — no
-   numbers.)
-2. **Execute each leaf** (no-think) — a focused calculator solve that computes
-   *exactly one* quantity, with all prior results supplied as known values. It
-   **can't drop a planned sub-step**, and each leaf is a single-step task where
-   003 showed no-think + the calculator is reliable.
-3. **Compose** — the last leaf's value is the answer.
+**Decompose-then-execute (reworked):**
+1. **Plan** (one model call, thinking ON) — the model writes a little PROGRAM:
+   an ordered JSON list of `{name, expr}` steps, each a **calculator
+   expression** over the constants, the problem's `given` values, earlier step
+   names, and math functions. The last step's value is the answer. *The model
+   computes no numbers.*
+2. **Execute** — the harness evaluates each expression **deterministically**
+   with the calculator, threading results forward. (The old version let
+   no-think model "leaves" do the arithmetic; they produced garbage. Now the
+   calculator does it — exactly.)
+
+This separates **decompose correctly** (the model) from **do arithmetic** (the
+deterministic calculator), and costs *one* model call instead of one per step.
 
 ## Problems — the hard multi-step cases
 
 | Problem | what | why |
 |---|---|---|
-| `astro-028` | bi-elliptic Δv | near the ceiling; 3 burns to compose |
-| `astro-031` | combined plane-change + circularize | the **0/3 wall** — does planning crack it? |
+| `astro-028` | bi-elliptic Δv | 3 burns to compose; the hardest |
+| `astro-031` | combined plane-change + circularize | the ex-"0/3 wall" (now known budget-bound) |
 | `astro-014` | small Hohmann (~217 m/s) | 007's drop-a-burn failure; rounding-sensitive |
 | `astro-005`, `astro-035` *(run only)* | Hohmann LEO→GEO; Hohmann-vs-bi-elliptic | broaden the signal |
 
@@ -62,6 +71,7 @@ make quick    # 3 hard problems × {mono,decomp} × N=3 = 18 cells (~30-50 min)
 make run      # 5 problems × N=5 = 50 cells (~80-110 min)
 ```
 
-Each `decomp` record stores the plan, every leaf's computed value, and the
-final composition, so a wrong answer can be traced to the exact step that
+Each `decomp` record stores the plan (the `{name, expr}` program), every
+step's evaluated value, and the final composition, so a wrong answer can be
+traced to the exact step that
 failed.

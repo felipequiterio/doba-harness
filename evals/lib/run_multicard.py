@@ -275,7 +275,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                         problem=solve_problem, condition=base, temperature=temperature,
                         max_tool_turns=cfg.get("max_tool_turns", 8),
                         max_total_turns=cfg.get("max_total_turns", 16),
-                        max_tokens=solve_max, disable_thinking=solve_dt, calculator_extras=constants)
+                        max_tokens=solve_max, disable_thinking=solve_dt, calculator_extras=constants,
+                        max_total_completion_tokens=cfg.get("max_completion_tokens"))
                     score = score_answer(
                         run.final_text, expected_value=problem["expected"]["value"],
                         expected_unit=problem["expected"]["unit"],

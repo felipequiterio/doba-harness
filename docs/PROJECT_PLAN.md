@@ -519,16 +519,22 @@ phase's limitation. Estimates are rough effort, not calendar.
 - **Exit:** **decision point.** If 004 shows self-built cards recover most of the
   lift → green-light Phase 5. If not → redesign ingestion before investing.
 
-### Phase 4 — Decomposition & reasoning-depth handling (~1 week)
-- **Goal:** crack the reasoning ceiling retrieval can't (PROJECT step 8).
-- **Components:** `decompose_problem` affordance; the loop's decomposition hook
-  (plan→leaves, think at plan level, no-think leaves); `make_plan` promoted to
-  default on ≥3-substep tasks.
-- **Deliverable:** Doba breaks deep tasks into sub-steps and solves them.
-- **Eval gate — Eval 006:** does decompose-then-solve crack `astro-031` (was
-  0/3) and lift multi-step success? (Cheap, skeleton-only — could run as early
-  as post-Phase-1 if prioritized.)
-- **Exit:** measured lift on the multi-step / `astro-031` cases.
+### Phase 4 — Harness caps + (reworked) decomposition (~1 week)
+- **Goal:** make hard multi-step problems reliable. 008 showed the bottleneck
+  is *not* a reasoning ceiling (there is none at adequate budget) but **harness
+  robustness** — so this phase is primarily the cap fix.
+- **Components (priority order):** (1) a **completion-token cap + forced-commit**
+  on the thinking loop (kills the 30k+-token runaway), plus an adequate token
+  budget and tool-turn cap; (2) *optionally* a **reworked** `decompose_problem`
+  affordance — model emits a plan of **calculator expressions** the harness
+  executes deterministically (008's first cut let no-think leaves do the
+  arithmetic and they produced garbage).
+- **Deliverable:** hard multi-step problems (`astro-028`/`031`) solve reliably;
+  no runaways.
+- **Eval gate:** budget/turn/cap success on `astro-028`/`031`; if decomposition
+  is built, does deterministic-execution decomposition add reliability/cost
+  value over the (now-capped) monolithic solve?
+- **Exit:** no runaways; measured reliability on the hard multi-step cases.
 
 ### Phase 5 — Learning Loop: full ingestion + graph + forgetting (~3–4 weeks)
 - **Goal:** the load-bearing pillar — the agent *builds* its world model.
@@ -643,16 +649,17 @@ diverges from the phase-logical labels used earlier in this doc.
   turns* (all 5 `max_tool_turns` failures were multi); thinking front-loads the
   plan and commits (**0/30 dropped answers**). On single, thinking *overthinks*
   a lookup it nails cheaply. Cost: ~1.9× tokens and ~1.75× latency per correct.
-  `astro-031` failed **0/3 in both modes** — the genuine ceiling; `astro-028`
-  went **3/3** (confirming it was budget-bound, not a wall).
+  At this run's 8k budget `astro-031` failed **0/3** and `astro-028` went 3/3 —
+  so `astro-031` *looked* like the genuine ceiling. **(008 later overturned
+  this: `astro-031` solves 3/3 at 16k tokens + a higher tool-turn cap — it was
+  budget-bound too.)**
 - **Expected?** The clean **sign-flip** was the real surprise — and it
   *reconciled* 002, whose "thinking hurts" was just a single-heavy sample. The
   honest read is the per-structure split, never the flat average.
 - **Shaped:** added **structure-gated thinking** (build step 9) — default off,
-  on for multi-step; reassigned the canonical **reasoning-ceiling exemplar from
-  `astro-028` → `astro-031`** (the one the budget fix *couldn't* save); and made
-  **decomposition** double-duty (step 8): breaking a problem into single-step
-  leaves lets each leaf run cheap no-think while the plan level thinks.
+  on for multi-step. The `astro-031`-is-the-ceiling reassignment made here was
+  **wrong** (see 008); the durable lesson is the opposite — *raise the budget /
+  turn cap before calling anything a ceiling*, and cap the thinking runaway.
 
 #### `004` — self-built cards (THE GATE) ✅ PASSED
 - **Tested:** can the 4B *build its own* card from a source passage and recover
@@ -735,7 +742,8 @@ diverges from the phase-logical labels used earlier in this doc.
   **Δv1 alone (110.9 m/s) — the model computed the first burn and stopped**,
   *despite* an explicit `total = burn1 + burn2` card; its own 6-card granular
   set solved it 3/3. `astro-028` (bi-elliptic) ground everything down
-  (C2/oracle/self ≈ 1/3, 1/3, 2/3) — the genuine reasoning-depth case.
+  (C2/oracle/self ≈ 1/3, 1/3, 2/3) — the hardest case here, though 008 later
+  showed its failures are token/turn-cap runaways, not a reasoning wall.
 - **Expected?** The *building works* result — yes (extends 004 to multi-card).
   The **oracle being the worst condition** was the surprise, and unlike 004/006
   it was *real, not a scoring artifact*: a terse composed-formula card with
@@ -751,19 +759,52 @@ diverges from the phase-logical labels used earlier in this doc.
   **confirmed the runaway-token bug recurs** (a self solve hit 32k tokens) →
   the token/turn cap + forced-commit fix is now a blocker for thinking-on runs.
 
-#### `008` — decomposition vs the ceiling ⏳ ON RADAR
-- **Will test:** does an explicit decompose-then-solve harness crack
-  `astro-031` (0/3) and stop the composition-drop failure 007 surfaced
-  (computing one burn, forgetting the rest)? Cheap and independent; directly
-  validates the decomposition policy (build step 8).
+#### `008` — decomposition vs the ceiling ✅ (inconclusive on decomposition; killed the "ceiling")
+- **Tested:** holding knowledge constant (oracle cards in both), does
+  **decompose-then-solve** beat a **monolithic** solve on the hard multi-step
+  transfers (`astro-028`, `astro-031`, `astro-014`)? Decompose = plan into
+  single-quantity sub-steps (thinking) → execute each as a no-think calculator
+  leaf → compose.
+- **Result — two findings, one of them invalidating the headline:**
+  - **Decomposition is *unproven*, not refuted.** It scored 11% vs mono's 67%
+    (−56pp), but that's a **broken first-cut harness**, not a verdict: plans
+    parsed only 44% of the time, and when they did, the no-think leaves computed
+    **garbage** (a 10-step Hohmann plan produced a final value 5000× too big;
+    one leaf returned `None`; errors cascaded). The *plan reasoning* was correct
+    — the *execution* was broken.
+  - **The big real finding: there is no genuine reasoning ceiling.** `astro-031`
+    — the doc-enshrined 0/3 wall — went **mono 3/3** at 16k tokens + a 12 tool-
+    turn cap. Combined with `astro-028`'s budget recovery, **every "mode-b
+    ceiling" has been a truncation/turn-cap artifact.** And mono's own failures
+    were all runaways/caps (a 36,773-token runaway → garbage; a `max_tool_turns`
+    cap), not reasoning.
+- **Expected?** No on both. We expected decomposition to *help* (it couldn't be
+  fairly tested) and `astro-031` to be a *wall* (it isn't). This is the
+  "first headline is an artifact" pattern again — this time the artifact was a
+  harness I wrote, with a genuine surprise underneath.
+- **Shaped:** **(1)** retired the "reasoning ceiling" claim across the docs —
+  the dataset has none at adequate budget. **(2)** Made the **harness budget +
+  tool-turn cap + thinking-runaway cap** the evidence-backed priority (it's what
+  actually caps the solver). **(3)** Demoted decomposition from "default" to
+  "unproven"; if pursued, the rework is *reliable plan emission* + *deterministic
+  leaf execution* (have the model emit calculator expressions the harness
+  evaluates, instead of letting no-think leaves do arithmetic).
 
-**Open follow-ups logged in the runs:** **(priority)** add a token/turn cap +
-forced-commit to the multi-turn thinking loops — the 32k runaway has now
-recurred in 005 *and* 007 and is blocking clean thinking-on multi-step runs;
-author multi-step oracle/canonical cards **granularly** (007 showed composed
-cards mislead); re-run 004 with more genuinely-`absent` single-formula problems
-at N≥5 (thin pool); `astro-027` is too flaky (~40% base failure) to be a clean
-probe — repair or retire it.
+#### `009` — decomposition, reworked ⏳ ON RADAR
+- **Will test:** with a fixed harness (model emits a plan of calculator
+  *expressions*; the harness executes them deterministically), does
+  decomposition add reliability/cost value? Motivation is now reliability, not
+  cracking a ceiling (there isn't one).
+
+**Open follow-ups logged in the runs:** **(priority, in progress)** add a
+completion-token cap + forced-commit to the multi-turn thinking loops — the
+30k+-token runaway has recurred in **005, 007, and 008** (a 36,773-token mono
+solve), and 008 showed it (plus the tool-turn cap) is the *actual* bottleneck
+on "hard" problems, not reasoning; rework the decomposition harness (deterministic
+expression execution) before re-testing it; author multi-step oracle/canonical
+cards **granularly** (007 showed composed cards mislead); re-run 004 with more
+genuinely-`absent` single-formula problems at N≥5 (thin pool); `astro-027` is too
+flaky (~40% base failure) to be a clean probe — repair or retire it.
 
 ### 9.2 Product track (TS — on the real harness, per phase)
 
@@ -772,21 +813,24 @@ probe — repair or retire it.
 | **Parity** | 1 | Does the TS harness reproduce 001–003? | direction match on oracle/thinking deltas |
 | **daily-life (slice)** | 2 | Memory coherence + tool selection at scale | recall hit-rate, tool-selection accuracy |
 | **self-built + distractor** | 3 | 004 + 006 re-run on real retrieval | % lift recovered; success vs #distractors |
-| **decomposition** | 4 | Does decomposition crack the depth ceiling? | `astro-031` + multi-step lift |
+| **harness caps** | 4 | Do budget + tool-turn + runaway caps lift "hard" multi-step? | success on `astro-028`/`031` at adequate budget |
+| **decomposition (reworked)** | 4 | Does deterministic-execution decomposition add reliability/cost value? | success + cost vs monolithic |
 | **forgetting** | 5 | Does pruning help? | retrieval precision, task success pruned vs not |
 | **transfer / graph** | 6 | Does graph traversal surface analogies? | transfer-task success, graph vs flat |
 | **daily-life (full)** | 7 | Daily-life reliability | success, turns, tool errors |
 | **Longitudinal** | 8 | Does Doba get smarter over time? | day-100 vs day-1 on held-out tasks |
 
 **Critical path:** 004 (gate ✓) → 005 (derivation solid ✓) → 006 (distractor ✓)
-→ 007 (multi-card ✓) → 008 → product re-runs per phase. The cumulative verdict:
-the Learning Loop's **ingest is buildable and robust** — the 4B builds correct
-single cards (004), derives reliably without a CAS (005), shrugs off generic
-retrieval noise but must disambiguate near-misses (006), and builds correct
-*multi-card* sets that it composes better than terse hand cards (007). The open
-risks have shifted from "can it build knowledge?" to **harness robustness**
-(the thinking-loop runaway) and **composition depth** (the mode-b ceiling that
-008's decomposition targets).
+→ 007 (multi-card ✓) → 008 (no ceiling ✓; decomposition unproven) → harness-cap
+fix → product re-runs per phase. The cumulative verdict: the Learning Loop's
+**ingest is buildable and robust** — the 4B builds correct single cards (004),
+derives reliably without a CAS (005), shrugs off generic retrieval noise but
+must disambiguate near-misses (006), and builds correct *multi-card* sets it
+composes better than terse hand cards (007). And 008 **dissolved the
+"reasoning ceiling"** — there is none at adequate budget. So the open risk is
+no longer "can it build knowledge or reason deeply?" (both yes) but **harness
+robustness**: the thinking-loop runaway and the budget/tool-turn caps are what
+actually decide the hard multi-step problems.
 
 ---
 

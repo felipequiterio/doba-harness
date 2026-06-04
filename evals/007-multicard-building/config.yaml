@@ -32,6 +32,7 @@ temperature: 0.2
 default_tolerance_rel: 0.01
 max_tool_turns: 12             # multi-card compositions take more calculator calls
 max_total_turns: 24
+max_completion_tokens: 24000   # cap the thinking-loop runaway (forced no-think commit)
 seed: 1729
 
 paths:

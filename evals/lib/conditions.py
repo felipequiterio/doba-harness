@@ -191,8 +191,15 @@ def run_condition(
     calculator_extras: Optional[dict[str, Any]] = None,
     max_tokens: Optional[int] = None,
     disable_thinking: bool = False,
+    max_total_completion_tokens: Optional[int] = None,
 ) -> RunResult:
-    """Drive a single (problem, condition) run to completion."""
+    """Drive a single (problem, condition) run to completion.
+
+    `max_total_completion_tokens` bounds the thinking-loop runaway: thinking-on
+    multi-step solves burn ~3k tokens/turn and can accumulate to 30k+ across
+    turns without committing (eval 008 saw a 36,773-token run produce garbage).
+    When the cumulative completion budget is hit, the harness forces ONE clean
+    NO-THINK commit and stops. None = no cap (back-compatible)."""
     # Resolve REF → underlying condition before we get here.
     if condition not in {"C1", "C2", "C3"}:
         raise ValueError(f"run_condition expects C1/C2/C3, got {condition!r}")
@@ -207,14 +214,16 @@ def run_condition(
     error: Optional[str] = None
     prodded = False
 
-    def call_model() -> str:
-        """Run one chat call, append a TurnRecord, return reply text."""
+    def call_model(force_no_think: bool = False) -> str:
+        """Run one chat call, append a TurnRecord, return reply text.
+        `force_no_think` overrides thinking OFF — used for the forced commit so
+        the budget-exhausted turn doesn't spend its tokens thinking again."""
         resp = client.chat(
             model=model_name,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            disable_thinking=disable_thinking,
+            disable_thinking=True if force_no_think else disable_thinking,
         )
         turns.append(TurnRecord(
             text=resp.text,
@@ -225,10 +234,26 @@ def run_condition(
         messages.append({"role": "assistant", "content": resp.text})
         return resp.text
 
+    def _total_completion() -> int:
+        return sum(t.completion_tokens for t in turns)
+
     t0 = time.monotonic()
     try:
         for _ in range(max_total_turns):
             reply = call_model()
+
+            # Token-budget guard: bound the thinking runaway. If the cumulative
+            # completion budget is hit, force one clean no-think commit and stop.
+            if (max_total_completion_tokens
+                    and _total_completion() >= max_total_completion_tokens
+                    and not (not extract_calc_calls(reply) and has_final_answer(reply))):
+                messages.append({"role": "user", "content": (
+                    "You have reached your token budget. Stop reasoning now. Using the "
+                    "RESULT values you already have, output ONLY `FINAL_ANSWER: <value> "
+                    "<unit>` on the next line — no thinking, no calculation.")})
+                reply = call_model(force_no_think=True)
+                stopped = "final_answer" if has_final_answer(reply) else "token_budget"
+                break
 
             # IMPORTANT: when a turn has BOTH CALC and FINAL_ANSWER, the
             # model usually wrote fake `RESULT:` lines for itself and

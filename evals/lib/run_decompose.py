@@ -42,10 +42,8 @@ CONDITIONS = ["mono", "decomp"]
 
 def _stub_policy(messages, model, ctx):
     sys = messages[0]["content"] if messages else ""
-    if "decomposing" in sys:                 # PLAN call
-        return '[{"id": 1, "compute": "an intermediate quantity"}, {"id": 2, "compute": "the final answer"}]'
-    if "EXACTLY ONE" in sys:                 # LEAF call
-        return f"CALC: {ctx.get('expected', 0.0):.6g}\nSTEP_RESULT: {ctx.get('expected', 0.0):.6g}"
+    if "PROGRAM" in sys:                      # PLAN call → a one-step program
+        return f'[{{"name": "answer", "expr": "{ctx.get("expected", 0.0):.10g}"}}]'
     return runlib._stub_policy(messages, model, ctx)   # MONO solve
 
 
@@ -132,11 +130,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     mono_dt = bool(local.get("disable_thinking", False))           # mono solve → thinking ON
     dcfg = cfg.get("decompose") or {}
     plan_dt = bool(dcfg.get("plan_disable_thinking", False))       # plan → thinking ON
-    leaf_dt = bool(dcfg.get("leaf_disable_thinking", True))        # leaves → no-think
     solve_max = local.get("max_tokens")
+    max_compl = cfg.get("max_completion_tokens")   # caps the thinking runaway
     plan_max = dcfg.get("plan_max_tokens") or solve_max
-    leaf_max = dcfg.get("leaf_max_tokens") or 4096
     temperature = cfg.get("temperature", 0.2)
+    # (decomp leaves are now DETERMINISTIC calculator execution — no leaf model calls.)
 
     run_id = runlib._make_run_id()
     run_dir = runlib._make_run_dir(cfg, run_id)
@@ -152,7 +150,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               else f"warmup: skipped ({w.get('error')})")
 
     print(f"eval 008 — decomposition · {len(problems)} problems × {len(conditions)} conditions × N={n_runs}")
-    print(f"mono think={'OFF' if mono_dt else 'ON'} · plan think={'OFF' if plan_dt else 'ON'} · leaf think={'OFF' if leaf_dt else 'ON'}")
+    print(f"mono think={'OFF' if mono_dt else 'ON'} · plan think={'OFF' if plan_dt else 'ON'} · leaves=deterministic calc")
     print(f"run dir: {run_dir}")
     print("-" * 78)
 
@@ -180,7 +178,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                             problem=problem, condition="C3", temperature=temperature,
                             max_tool_turns=cfg.get("max_tool_turns", 12),
                             max_total_turns=cfg.get("max_total_turns", 24),
-                            max_tokens=solve_max, disable_thinking=mono_dt, calculator_extras=constants)
+                            max_tokens=solve_max, disable_thinking=mono_dt, calculator_extras=constants,
+                            max_total_completion_tokens=max_compl)
                         score = score_answer(run.final_text, expected_value=problem["expected"]["value"],
                                              expected_unit=problem["expected"]["unit"],
                                              tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
@@ -197,9 +196,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                             client=solver, model_name=("stub" if args.stub else model_name),
                             problem=problem, cards_block=cards_block, expected_unit=problem["expected"]["unit"],
                             calculator_extras=constants, temperature=temperature,
-                            plan_max_tokens=plan_max, leaf_max_tokens=leaf_max,
-                            plan_disable_thinking=plan_dt, leaf_disable_thinking=leaf_dt,
-                            max_steps=dcfg.get("max_steps", 12), max_calc_turns=dcfg.get("max_calc_turns", 6))
+                            plan_max_tokens=plan_max, plan_disable_thinking=plan_dt,
+                            max_steps=dcfg.get("max_steps", 16))
                         score = score_answer(dr.final_text, expected_value=problem["expected"]["value"],
                                              expected_unit=problem["expected"]["unit"],
                                              tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
@@ -207,7 +205,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                         rec.update({"completion_tokens": dr.completion_tokens, "n_tool_calls": dr.n_tool_calls,
                                     "stopped_reason": dr.stopped_reason, "plan_ok": dr.plan_ok,
                                     "n_steps": dr.n_steps, "plan": dr.plan,
-                                    "leaf_values": [{"id": lf.id, "compute": lf.compute, "value": lf.value} for lf in dr.leaves],
+                                    "leaf_values": [{"id": lf.id, "name": lf.compute, "expr": lf.expr,
+                                                     "value": lf.value, "error": lf.error} for lf in dr.leaves],
                                     "final_value": dr.final_value})
                         if logs_dir is not None:
                             (logs_dir / f"{problem['id']}__decomp__run{run_idx}.log").write_text(

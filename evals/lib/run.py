@@ -507,6 +507,7 @@ def run_all(
                         max_tokens=max_tokens_override or model_cfg.get("max_tokens"),
                         disable_thinking=disable_think,
                         calculator_extras=dataset_constants,
+                        max_total_completion_tokens=cfg.get("max_completion_tokens"),
                     )
                     score = score_answer(
                         run.final_text,
