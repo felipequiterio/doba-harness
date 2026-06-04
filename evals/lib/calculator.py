@@ -152,6 +152,11 @@ class Calculator:
         return cls(names)
 
     def eval(self, expr: str) -> float:
+        # Treat `^` as exponentiation. Models very often write `r^2` for a
+        # power, but Python parses `^` as bitwise-xor (which the AST walker
+        # rejects) — so any CALC line using a caret would silently error. In
+        # these math expressions `^` is never bitwise-xor, so map it to `**`.
+        expr = expr.replace("^", "**")
         # Pre-screen for surface patterns that *should* never reach the AST
         # walker, so we can give clearer error messages.
         if any(bad in expr for bad in ("__", "import ", "lambda", ":=", ";")):

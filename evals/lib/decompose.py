@@ -132,14 +132,15 @@ def solve_decomposed(*, client, model_name, problem, cards_block, expected_unit,
     prompt_tok = compl_tok = 0
     plan_texts: list[str] = []
 
-    def _plan_call(extra_user: Optional[str] = None):
+    def _plan_call(extra_user: Optional[str] = None, force_no_think: bool = False):
         nonlocal prompt_tok, compl_tok
         msgs = [{"role": "system", "content": _PLAN_SYS},
                 {"role": "user", "content": _plan_user(statement, cards_block, given, const_names)}]
         if extra_user:
             msgs.append({"role": "user", "content": extra_user})
         resp = client.chat(model=model_name, messages=msgs, temperature=temperature,
-                           max_tokens=plan_max_tokens, disable_thinking=plan_disable_thinking)
+                           max_tokens=plan_max_tokens,
+                           disable_thinking=True if force_no_think else plan_disable_thinking)
         prompt_tok += resp.prompt_tokens; compl_tok += resp.completion_tokens
         plan_texts.append(resp.text)
         return _parse_plan(resp.text)
@@ -147,8 +148,11 @@ def solve_decomposed(*, client, model_name, problem, cards_block, expected_unit,
     try:
         plan = _plan_call()
         if not plan and retry_on_parse_fail:
+            # The thinking-on plan can run away without emitting JSON (008 saw
+            # this on bi-elliptic). Retry NO-THINK for a clean emission.
             plan = _plan_call("Output ONLY the JSON array of "
-                              "{\"name\":..., \"expr\":...} steps — nothing else.")
+                              "{\"name\":..., \"expr\":...} steps — nothing else.",
+                              force_no_think=True)
         plan_ok = bool(plan)
         plan = plan[:max_steps]
         if not plan_ok:
