@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
+from . import stats
+
 
 def _here() -> Path:
     return Path(__file__).resolve().parent.parent
@@ -118,13 +120,14 @@ def _summary_md(runs: list[dict[str, Any]], chart_paths: list[str]) -> str:
     # 1. Per-condition overall (including strict-vs-salvaged split).
     lines.append("## 1. Overall success rate by condition")
     lines.append("")
-    lines.append("| Condition | answer_correct (any) | strict (no salvage) | salvaged | method_correct |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("| Condition | answer_correct (any) | 95% CI, by problem | strict (no salvage) | salvaged | method_correct |")
+    lines.append("|---|---|---|---|---|---|")
     for c in conditions:
         cell = by_cond.get((c,), Cell())
         salvaged_str = f"+{cell.n_salvaged}" if cell.n_salvaged else "0"
+        ci = stats.rate_ci([r for r in runs if r["condition"] == c])
         lines.append(
-            f"| {c} | {_fmt_rate(cell.rate, cell.n)} | "
+            f"| {c} | {_fmt_rate(cell.rate, cell.n)} | {ci.fmt()} ({ci.n_problems} problems) | "
             f"{_fmt_rate(cell.strict_rate, cell.n)} | {salvaged_str} | "
             f"{_fmt_rate(cell.method_rate, cell.n_judged)} |"
         )
@@ -133,7 +136,9 @@ def _summary_md(runs: list[dict[str, Any]], chart_paths: list[str]) -> str:
         "*`strict` = correct AND the model emitted `FINAL_ANSWER:` verbatim. "
         "`salvaged` = the answer was recovered from the trace tail because no "
         "`FINAL_ANSWER` line was present; these count as correct in the "
-        "`any` column but are tracked separately for methodology auditing.*"
+        "`any` column but are tracked separately for methodology auditing. "
+        "The CI resamples *problems*, not runs: runs of one problem are "
+        "correlated, so n=problems is the honest sample size (see lib/stats.py).*"
     )
     lines.append("")
 
@@ -237,6 +242,28 @@ def _summary_md(runs: list[dict[str, Any]], chart_paths: list[str]) -> str:
         lines.append(f"  - on knowledge=absent: REF {fmt(cell_rate('REF', 'absent'))}  →  REF_C3 {fmt(ref_c3_abs)}  ({delta(ref_c3_abs, cell_rate('REF', 'absent'))})")
         lines.append("")
 
+    # 4b. The same readouts as paired, problem-level comparisons with CIs.
+    lines.append("## 4b. Paired comparisons (problem-level, 95% bootstrap CI + sign test)")
+    lines.append("")
+    lines.append("Each delta pairs the two conditions on the *same* problems. A CI that "
+                 "spans 0, or a sign-test p above ~0.05, means the data cannot tell the "
+                 "conditions apart — read the readouts above as direction only.")
+    lines.append("")
+    comparisons = [
+        ("C2", "C1", "knowledge_label", "absent"),
+        ("C3", "C2", "knowledge_label", "absent"),
+        ("C3", "C2", "knowledge_label", "present"),
+        ("C3", "REF", None, None),
+        ("REF_C3", "REF", None, None),
+    ]
+    for a, b, key, value in comparisons:
+        if a not in conditions or b not in conditions:
+            continue
+        subset = runs if key is None else [r for r in runs if r.get(key) == value]
+        scope = "all problems" if key is None else f"{key}={value}"
+        lines.append(f"- {stats.paired(subset, a, b).fmt()}  ({scope})")
+    lines.append("")
+
     # 5. Charts.
     if chart_paths:
         lines.append("## 5. Charts")
@@ -266,8 +293,8 @@ def _summary_md(runs: list[dict[str, Any]], chart_paths: list[str]) -> str:
     # 8. Latency / tool-call summary.
     lines.append("## 8. Latency / tool-call medians")
     lines.append("")
-    lines.append("| Condition | median latency (s) | median n_tool_calls |")
-    lines.append("|---|---|---|")
+    lines.append("| Condition | median latency (s) | median n_tool_calls | max peak context (tokens) |")
+    lines.append("|---|---|---|---|")
     by_cond_runs = defaultdict(list)
     for r in runs:
         by_cond_runs[r["condition"]].append(r)
@@ -277,7 +304,12 @@ def _summary_md(runs: list[dict[str, Any]], chart_paths: list[str]) -> str:
         tc = [r["n_tool_calls"] for r in rs if r.get("n_tool_calls") is not None]
         lat_m = statistics.median(lat) if lat else None
         tc_m = statistics.median(tc) if tc else None
-        lines.append(f"| {c} | {('-' if lat_m is None else f'{lat_m:.2f}')} | {('-' if tc_m is None else f'{tc_m:.1f}')} |")
+        peaks = [r["peak_context_tokens"] for r in rs if r.get("peak_context_tokens")]
+        peak = str(max(peaks)) if peaks else "-"
+        lines.append(f"| {c} | {('-' if lat_m is None else f'{lat_m:.2f}')} | {('-' if tc_m is None else f'{tc_m:.1f}')} | {peak} |")
+    lines.append("")
+    lines.append("*Peak context at or above the model's `num_ctx` means Ollama silently "
+                 "truncated the prompt on that run — check before reading a failure as reasoning.*")
     lines.append("")
 
     return "\n".join(lines) + "\n"
