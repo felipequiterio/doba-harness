@@ -2,7 +2,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-uv.lock
 
 # Eval outputs (large, regenerable). Each run lives under results/<timestamp>/.
 # Ignore the timestamped subdirs + the legacy top-level layout from before the
