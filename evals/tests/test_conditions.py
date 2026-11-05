@@ -105,3 +105,41 @@ def test_strip_think_for_inline_reasoning():
     assert strip_think("<think>still going CALC: 1+1") == ""
     assert strip_think("(only thinking content returned)\n<think>x</think>") == ""
     assert strip_think("no reasoning here") == "no reasoning here"
+
+
+# ---------------------------------------------------------------------------
+# Tool-turn cap: counts CALC→RESULT round-trips, and answers the last one.
+# ---------------------------------------------------------------------------
+def test_tool_cap_counts_turns_not_expressions():
+    # Two turns of three CALCs each: 6 expressions but only 2 round-trips.
+    client = ScriptedClient([
+        _ollama_turn(content="CALC: 1 + 1\nCALC: 2 + 2\nCALC: 3 + 3"),
+        _ollama_turn(content="CALC: 4 + 4\nCALC: 5 + 5\nCALC: 6 + 6"),
+        _ollama_turn(content="FINAL_ANSWER: 12 m/s"),
+    ])
+    run = _run(client, max_tool_turns=3)
+    assert run.n_tool_calls == 6 and run.n_tool_turns == 2
+    assert run.stopped_reason == "final_answer"
+
+
+def test_capping_turn_still_gets_its_results():
+    client = ScriptedClient([
+        _ollama_turn(content="CALC: 1 + 1"),
+        _ollama_turn(content="CALC: 40 + 2"),
+        _ollama_turn(content="FINAL_ANSWER: 42 m/s"),
+    ])
+    run = _run(client, max_tool_turns=2)
+    cap_msg = client.sent[2][-1]["content"]
+    assert "RESULT: 42" in cap_msg and "Tool-call cap reached" in cap_msg
+    assert run.stopped_reason == "final_answer"
+
+
+def test_token_budget_commit_answers_pending_calcs():
+    client = ScriptedClient([
+        _ollama_turn(content="CALC: 40 + 2", tokens=500),
+        _ollama_turn(content="FINAL_ANSWER: 42 m/s", tokens=5),
+    ])
+    run = _run(client, max_total_completion_tokens=100)
+    commit_msg = client.sent[1][-1]["content"]
+    assert commit_msg.startswith("RESULT: 42") and "token budget" in commit_msg
+    assert run.stopped_reason == "final_answer"

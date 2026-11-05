@@ -161,7 +161,7 @@ class RunResult:
     raw_messages: list[dict[str, str]]
     final_text: str               # the last assistant message's answer (reasoning stripped) — what gets scored
     full_trace: str               # concatenation of all assistant messages incl. <think> (for logs + the judge)
-    n_tool_calls: int
+    n_tool_calls: int             # CALC expressions evaluated
     n_turns: int                  # assistant turns
     stopped_reason: str           # "final_answer" | "max_turns" | "max_tool_turns" | "error"
     latency_s: float              # wall-clock for the whole loop
@@ -175,6 +175,7 @@ class RunResult:
     # Largest prompt+completion of any single call. Compare against the
     # model's num_ctx: at or above it, Ollama silently truncated the context.
     peak_context_tokens: int = 0
+    n_tool_turns: int = 0         # CALC→RESULT round-trips (what max_tool_turns caps)
 
     @property
     def total_tokens(self) -> int:
@@ -219,7 +220,8 @@ def run_condition(
 
     messages = build_messages(problem, condition, disable_thinking=disable_thinking)
     turns: list[TurnRecord] = []
-    n_tool_calls = 0
+    n_tool_calls = 0      # CALC expressions evaluated (a metric)
+    n_tool_turns = 0      # CALC→RESULT round-trips (what max_tool_turns caps)
     stopped = "max_turns"
     error: Optional[str] = None
     prodded = False
@@ -264,7 +266,15 @@ def run_condition(
             if (max_total_completion_tokens
                     and _total_completion() >= max_total_completion_tokens
                     and not (not extract_calc_calls(reply) and has_final_answer(reply))):
-                messages.append({"role": "user", "content": (
+                # Answer any CALCs from the budget-exhausting turn first, so the
+                # forced commit can use them instead of guessing.
+                pending = extract_calc_calls(reply) if use_calc else []
+                prefix = ""
+                if pending:
+                    n_tool_calls += len(pending)
+                    n_tool_turns += 1
+                    prefix = evaluate_text(reply, calc)[1] + "\n\n"
+                messages.append({"role": "user", "content": prefix + (
                     "You have reached your token budget. Stop reasoning now. Using the "
                     "RESULT values you already have, output ONLY `FINAL_ANSWER: <value> "
                     "<unit>` on the next line — no thinking, no calculation.")})
@@ -302,20 +312,28 @@ def run_condition(
                 })
                 continue
 
+            # `max_tool_turns` caps CALC→RESULT round-trips (turns), as its
+            # name and config.yaml document — not CALC expressions: a turn with
+            # three CALC lines is one round-trip. The capping turn's CALCs are
+            # still answered, so the forced commit uses real numbers instead
+            # of guessing the last intermediate.
             n_tool_calls += len(calc_exprs)
-            if n_tool_calls > max_tool_turns:
+            n_tool_turns += 1
+            _, results_msg = evaluate_text(reply, calc)
+
+            if n_tool_turns >= max_tool_turns:
                 messages.append({
                     "role": "user",
-                    "content": (
+                    "content": results_msg + "\n\n" + (
                         "Tool-call cap reached. Stop computing and emit "
-                        "FINAL_ANSWER on the next line."
+                        "FINAL_ANSWER on the next line, using the RESULT "
+                        "values you have."
                     ),
                 })
                 reply = call_model()
                 stopped = "final_answer" if has_final_answer(reply) else "max_tool_turns"
                 break
 
-            _, results_msg = evaluate_text(reply, calc)
             # If the model also emitted a FINAL_ANSWER in this turn, it was
             # almost certainly based on hallucinated RESULT lines. Tell the
             # model to discard it and recompute from these real numbers.
@@ -355,4 +373,5 @@ def run_condition(
         error=error,
         answer_trace=answer_trace,
         peak_context_tokens=peak_context,
+        n_tool_turns=n_tool_turns,
     )

@@ -240,6 +240,7 @@ def _record_for_run(
         "run_idx": run_idx,
         "model": model_name,
         "n_tool_calls": run.n_tool_calls,
+        "n_tool_turns": getattr(run, "n_tool_turns", None),
         "n_turns": run.n_turns,
         "latency_s": round(run.latency_s, 4),
         "prompt_tokens": run.prompt_tokens,
