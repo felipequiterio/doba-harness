@@ -1,0 +1,39 @@
+name: evals
+
+# Everything here runs without a model: unit tests, the dataset's
+# code-computed ground truth, and every experiment's stub smoke run.
+# Real runs need a local Ollama + GPU and stay manual (`make run`).
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: evals
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: uv sync
+
+      - name: Ground truth matches the dataset
+        run: make gt-check
+
+      - name: Unit tests
+        run: make test
+
+      - name: Stub smoke run of every experiment
+        run: |
+          for d in [0-9]*-*/; do
+            echo "::group::$d"
+            make -C "$d" smoke
+            echo "::endgroup::"
+          done
