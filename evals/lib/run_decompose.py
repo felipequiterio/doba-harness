@@ -183,7 +183,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                         score = score_answer(run.final_text, expected_value=problem["expected"]["value"],
                                              expected_unit=problem["expected"]["unit"],
                                              tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
-                                             full_trace=run.full_trace)
+                                             full_trace=run.answer_trace)
                         rec.update({"completion_tokens": run.completion_tokens, "n_tool_calls": run.n_tool_calls,
                                     "stopped_reason": run.stopped_reason})
                         if logs_dir is not None:

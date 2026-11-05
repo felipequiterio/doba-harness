@@ -99,12 +99,13 @@ def _symb_loop(*, client, model_name, messages, max_turns, max_tokens,
         stats.completion_tokens += resp.completion_tokens
         stats.latency_s += resp.latency_s
         stats.parts.append(resp.text)
-        messages.append({"role": "assistant", "content": resp.text})
+        answer = resp.answer                 # act on the answer, never on <think>
+        messages.append({"role": "assistant", "content": answer})
 
-        symb_exprs = extract_symb_calls(resp.text)
+        symb_exprs = extract_symb_calls(answer)
         if symb_exprs:                       # tool use wins over a premature card
             stats.n_symb_calls += len(symb_exprs)
-            _, results_msg = evaluate_symb_text(resp.text)
+            _, results_msg = evaluate_symb_text(answer)
             messages.append({"role": "user", "content": results_msg})
             prodded = False
             continue

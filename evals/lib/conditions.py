@@ -137,11 +137,15 @@ def build_messages(
 @dataclass
 class TurnRecord:
     """One assistant turn's metadata. Kept alongside the message itself so
-    the per-run log can annotate every assistant message with tk/s + cost."""
+    the per-run log can annotate every assistant message with tk/s + cost.
+
+    `text` is the full turn as logged (may include a `<think>` block);
+    `answer` is the reasoning-free content the harness actually parsed."""
     text: str
     prompt_tokens: int
     completion_tokens: int
     latency_s: float
+    answer: str = ""
 
     @property
     def tokens_per_second(self) -> float:
@@ -155,8 +159,8 @@ class RunResult:
     condition: str
     problem_id: str
     raw_messages: list[dict[str, str]]
-    final_text: str               # the last assistant message
-    full_trace: str               # concatenation of all assistant messages (for the judge)
+    final_text: str               # the last assistant message's answer (reasoning stripped) — what gets scored
+    full_trace: str               # concatenation of all assistant messages incl. <think> (for logs + the judge)
     n_tool_calls: int
     n_turns: int                  # assistant turns
     stopped_reason: str           # "final_answer" | "max_turns" | "max_tool_turns" | "error"
@@ -165,6 +169,12 @@ class RunResult:
     prompt_tokens: int = 0        # summed across all turns
     completion_tokens: int = 0
     error: Optional[str] = None
+    # Concatenated answers only (no <think>) — the haystack for salvage, so a
+    # number the model merely considered while thinking is never scored.
+    answer_trace: str = ""
+    # Largest prompt+completion of any single call. Compare against the
+    # model's num_ctx: at or above it, Ollama silently truncated the context.
+    peak_context_tokens: int = 0
 
     @property
     def total_tokens(self) -> int:
@@ -215,7 +225,12 @@ def run_condition(
     prodded = False
 
     def call_model(force_no_think: bool = False) -> str:
-        """Run one chat call, append a TurnRecord, return reply text.
+        """Run one chat call, append a TurnRecord, return the reply's answer.
+
+        Only the answer (reasoning stripped) is parsed and fed back as
+        history: a CALC/FINAL_ANSWER written inside `<think>` is not acted on,
+        and old reasoning is not re-injected into the context every turn
+        (which grew the prompt by ~3k tokens/turn on thinking-on solves).
         `force_no_think` overrides thinking OFF — used for the forced commit so
         the budget-exhausted turn doesn't spend its tokens thinking again."""
         resp = client.chat(
@@ -225,14 +240,16 @@ def run_condition(
             max_tokens=max_tokens,
             disable_thinking=True if force_no_think else disable_thinking,
         )
+        answer = resp.answer
         turns.append(TurnRecord(
             text=resp.text,
             prompt_tokens=resp.prompt_tokens,
             completion_tokens=resp.completion_tokens,
             latency_s=resp.latency_s,
+            answer=answer,
         ))
-        messages.append({"role": "assistant", "content": resp.text})
-        return resp.text
+        messages.append({"role": "assistant", "content": answer})
+        return answer
 
     def _total_completion() -> int:
         return sum(t.completion_tokens for t in turns)
@@ -316,10 +333,12 @@ def run_condition(
         error = repr(e)
 
     latency = time.monotonic() - t0
-    final_text = turns[-1].text if turns else ""
+    final_text = turns[-1].answer if turns else ""
     full_trace = "\n\n---\n\n".join(t.text for t in turns)
+    answer_trace = "\n\n---\n\n".join(t.answer for t in turns)
     prompt_total = sum(t.prompt_tokens for t in turns)
     completion_total = sum(t.completion_tokens for t in turns)
+    peak_context = max((t.prompt_tokens + t.completion_tokens for t in turns), default=0)
     return RunResult(
         condition=condition,
         problem_id=problem["id"],
@@ -334,4 +353,6 @@ def run_condition(
         prompt_tokens=prompt_total,
         completion_tokens=completion_total,
         error=error,
+        answer_trace=answer_trace,
+        peak_context_tokens=peak_context,
     )

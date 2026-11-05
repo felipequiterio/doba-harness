@@ -319,7 +319,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                         expected_value=problem["expected"]["value"],
                         expected_unit=problem["expected"]["unit"],
                         tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
-                        full_trace=run.full_trace,
+                        full_trace=run.answer_trace,
                     )
                     rec = _record(
                         problem=problem, condition=condition, run_idx=run_idx,

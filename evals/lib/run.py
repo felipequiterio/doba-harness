@@ -248,6 +248,9 @@ def _record_for_run(
         "tokens_per_second": round(run.tokens_per_second, 2),
         "stopped_reason": run.stopped_reason,
         "error": run.error,
+        # Largest single-call context; at/above the model's num_ctx Ollama
+        # silently truncated the prompt (see conditions.RunResult).
+        "peak_context_tokens": getattr(run, "peak_context_tokens", 0),
         "raw_output": run.final_text,
         "full_trace": run.full_trace,
     }
@@ -514,7 +517,7 @@ def run_all(
                         expected_value=problem["expected"]["value"],
                         expected_unit=problem["expected"]["unit"],
                         tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
-                        full_trace=run.full_trace,
+                        full_trace=run.answer_trace,
                     )
                     if use_judge and run.full_trace:
                         mc, rationale = judge_method(
