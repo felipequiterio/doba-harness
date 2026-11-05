@@ -24,7 +24,7 @@ layer before code gets written.
 | ID  | Setup                                                      |
 |-----|------------------------------------------------------------|
 | C1  | Raw 4B. No tools, no injected knowledge.                   |
-| C2  | 4B + calculator tool (text protocol — see `src/calculator.py`). |
+| C2  | 4B + calculator tool (text protocol — see `lib/calculator.py`). |
 | C3  | 4B + calculator + **oracle formula card(s)** injected.     |
 | REF | Frontier model on C1. Ceiling reference.                   |
 
@@ -41,28 +41,16 @@ confirm the ceiling isn't itself knowledge-limited.
 
 ## Layout
 
+This folder is a thin experiment wrapper; the harness lives in `evals/lib/`
+and the dataset in `evals/datasets/astrodynamics/` (see `evals/README.md`).
+
 ```
 evals/001-astro-failure-modes/
-  Makefile                      # uv-backed targets for everything below
-  pyproject.toml                # deps (managed by uv)
-  config.yaml                   # endpoints, N runs, tolerances
-  dataset/astrodynamics_v1.json # problems + oracle cards + expected answers
-  src/
-    ground_truth.py             # computes expected answers IN CODE
-    calculator.py               # safe AST evaluator + CALC/RESULT protocol
-    scoring.py                  # answer parsing, SI normalization, tolerance
-    models.py                   # OpenAI/OpenRouter/Anthropic clients + stub
-    conditions.py               # C1/C2/C3/REF prompt + tool assembly
-    probe.py                    # labels each problem knowledge=present/absent
-    run.py                      # orchestrates all conditions × N
-    run_log.py                  # per-run human-readable log writer
-    analyze.py                  # runs.jsonl → summary.md + charts
-  tests/                        # scoring, calculator safety, ground truth
-  results/
-    runs.jsonl                  # one JSON line per run (for analyze.py)
-    logs/<id>__<cond>__run<i>.log   # per-run text log (full trace + tokens)
-    summary.md                  # markdown summary
-    charts/                     # matplotlib PNGs
+  Makefile        # uv-backed targets (run from evals/ via `cd ..`)
+  config.yaml     # endpoints, conditions, N runs, tolerances
+  README.md       # this file
+  results/<timestamp>/   # runs.jsonl, logs/, summary.md, charts/ (gitignored)
+  results/latest -> the most recent run
 ```
 
 ## Setup
@@ -71,8 +59,9 @@ Uses [uv](https://docs.astral.sh/uv/) (much faster than pip; manages the
 venv automatically).
 
 ```bash
-cd evals/001-astro-failure-modes
-make install                 # uv sync — creates .venv from pyproject.toml
+cd evals
+make sync                    # uv sync — creates evals/.venv from evals/pyproject.toml
+cd 001-astro-failure-modes
 ```
 
 `config.yaml` ships pre-wired for **Qwen3.5 4B in Ollama** (local) and
@@ -99,7 +88,7 @@ Everything goes through the Makefile (`make help` lists targets):
 make smoke-tiny      # 1 problem × 1 run × stub clients — no keys, sanity wiring
 make probe           # label every problem knowledge=present|absent
 make run             # full sweep — 10 problems × 4 conditions × N runs
-make analyze         # results/summary.md + results/charts/*.png
+make analyze         # results/latest/summary.md + charts/*.png
 ```
 
 Knob-style overrides on `make run`:
@@ -111,11 +100,11 @@ make run PROBLEMS=astro-001,astro-005         # narrow the dataset
 make run-stub N=2                             # no keys, but full pipeline
 ```
 
-Per-run text logs land in `results/logs/<id>__<cond>__run<i>.log` — each
+Per-run text logs land in `results/<timestamp>/logs/<id>__<cond>__run<i>.log` — each
 file contains the full message history, every assistant turn annotated
 with prompt/completion tokens + tk/s, the final score, and the judge's
 rationale. `make logs` cats a random one for quick spot-checking. Pass
-`--no-logs` to `src.run` if you want to skip them.
+`--no-logs` to `lib.run` if you want to skip them.
 
 ## Tests
 
@@ -187,19 +176,21 @@ The tests verify:
 
 ## Dataset
 
-`dataset/astrodynamics_v1.json` ships with **10 problems** spanning circular
-orbits, vis-viva, Kepler-3, escape velocity, Hohmann transfer (delta-v and
-time-of-flight), plane change, C3/v∞, and specific energy. Split:
+`evals/datasets/astrodynamics/v1.json` now holds **38 problems** (20 single /
+18 multi) spanning circular orbits, vis-viva, Kepler-3, escape velocity,
+Hohmann and bi-elliptic transfers, plane changes, C3/v∞, sphere of influence,
+J2 regression and more. 001 originally ran on the first slice of it; later
+evals added problems as they needed them.
 
-- **single** (one formula, direct application): 6
-- **multi** (composition of ≥2 formulas / definitions): 4
+- **single** (one formula, direct application)
+- **multi** (composition of ≥2 formulas / definitions)
 
-**Review and expand to ~24–30 problems before drawing strong conclusions.**
-Ten is enough to wire the pipeline and see direction-of-effect; not enough to
-publish. Add problems by appending to the JSON and running:
+Treat every result as per-*problem* evidence: runs of one problem are
+correlated, so `python -m lib.stats` reports CIs over problems. Add problems
+by appending to the JSON and running (from `evals/`):
 
 ```bash
-python -m src.ground_truth --check   # asserts JSON matches computed answers
+make gt-check   # asserts JSON matches ground_truth.py
 ```
 
 ## Decision rule
@@ -226,7 +217,7 @@ Rule of thumb:
 ## Assumptions baked in
 
 - Equatorial Earth radius **6 378 137 m** (WGS-84), `μ_⊕ = 3.986 004 418 × 10¹⁴
-  m³/s²`. GEO altitude taken as 35 786 km. Documented in `src/ground_truth.py`.
+  m³/s²`. GEO altitude taken as 35 786 km. Documented in `datasets/astrodynamics/ground_truth.py`.
 - All expected answers are in **SI units**. Models can answer in any unit; the
   scorer normalizes before comparing.
 - Default `tolerance_rel = 0.01` (1 %). Override per-problem in the JSON.

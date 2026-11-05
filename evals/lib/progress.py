@@ -1,5 +1,5 @@
 """
-Live progress output for `python -m src.run`.
+Live progress output for `python -m lib.run`.
 
 What it shows:
   - A header banner before the sweep starts (dataset / conditions / models).

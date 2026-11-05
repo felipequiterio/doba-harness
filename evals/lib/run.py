@@ -3,13 +3,13 @@ Orchestrator: cross product of (problem × condition × run_idx) → runs.jsonl.
 
 Usage:
 
-    python -m src.run                              # default: from config.yaml
-    python -m src.run --conditions C1,C2,C3,REF
-    python -m src.run --conditions C1,C2,C3 --n-runs 2
-    python -m src.run --stub                       # canned model, for wiring tests
-    python -m src.run --no-judge                   # skip the LLM-as-judge method scoring
-    python -m src.run --problems astro-001,astro-005
-    python -m src.run -o results/runs.jsonl        # output path override
+    python -m lib.run                              # default: from config.yaml
+    python -m lib.run --conditions C1,C2,C3,REF
+    python -m lib.run --conditions C1,C2,C3 --n-runs 2
+    python -m lib.run --stub                       # canned model, for wiring tests
+    python -m lib.run --no-judge                   # skip the LLM-as-judge method scoring
+    python -m lib.run --problems astro-001,astro-005
+    python -m lib.run -o results/runs.jsonl        # output path override
 
 Each run appends a JSON line with:
   id, condition, run_idx, model, n_tool_calls, n_turns, latency_s,

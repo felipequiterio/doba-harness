@@ -13,10 +13,10 @@ This label is what lets `analyze.py` answer the core question:
 
 Usage:
 
-    python -m src.probe                  # uses local + frontier from config.yaml
-    python -m src.probe --stub           # canned responses for wiring tests
-    python -m src.probe --in-place       # writes labels back into dataset JSON
-    python -m src.probe -o probe.json    # write a sidecar file instead
+    python -m lib.probe                  # uses local + frontier from config.yaml
+    python -m lib.probe --stub           # canned responses for wiring tests
+    python -m lib.probe --in-place       # writes labels back into dataset JSON
+    python -m lib.probe -o probe.json    # write a sidecar file instead
 """
 
 from __future__ import annotations

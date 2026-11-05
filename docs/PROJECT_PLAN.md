@@ -5,8 +5,8 @@
 > TypeScript across frontend, API, and harness. Eval-driven at every phase.
 
 **Owner:** Felipe · **Date:** 2026-06-03 · **Status:** planning (no product code yet)
-**Reads with:** `draft.md` (vision), `PROJECT.md` (vision + eval findings),
-`draft_3.md` (eval detail). This document is the *how-to-build*; those are
+**Reads with:** `archive/draft.md` (vision), `PROJECT.md` (vision + eval findings),
+`archive/draft_3.md` (eval detail). This document is the *how-to-build*; those are
 the *what* and the *why*.
 
 ---
@@ -333,11 +333,11 @@ doba/
 │   └── ...
 │
 ├── infra/                      # compose overrides, seed scripts, db init
-└── docs/                       # draft.md, PROJECT.md, draft_3.md, this file
+└── docs/                       # PROJECT.md, this file, archive/ (drafts 1–3)
 ```
 
 Note: the Python `evals/001…003` are **archived** — their findings live in
-`PROJECT.md`/`draft_3.md`. The TS `evals/` is the going-forward runner. The
+`PROJECT.md`/`archive/draft_3.md`. The TS `evals/` is the going-forward runner. The
 dataset JSON ports as-is; `ground_truth.py` becomes `ground_truth.ts`.
 
 ---
@@ -588,6 +588,19 @@ load-bearing ones per phase. Eval numbers below are *creation order*, which
 diverges from the phase-logical labels used earlier in this doc.
 
 ### 9.1 Research track (Python) — what each eval tested, found, and changed
+
+> **Re-run pending (2026-11).** Two harness bugs were found and fixed after
+> these evals ran: (1) with thinking ON, `conditions.run_condition` parsed and
+> replayed the raw `<think>` text — CALCs the model only considered were
+> executed and counted, a `FINAL_ANSWER` inside `<think>` was scored, and
+> every turn's reasoning was re-fed as history (006's select step had the same
+> leak, as did 005's SYMB build loop); (2) `max_tool_turns` counted CALC expressions, not round-trips, and
+> the capping turn's CALCs were never answered. Treat the thinking-ON results
+> (**002, 003, 007, 008**), 005's SymPy modes and 006's selection numbers as provisional until
+> re-run; 003's "no-think runs out of tool turns on multi-step" may be partly
+> bug (2). Runs now log `peak_context_tokens` to rule out silent `num_ctx`
+> truncation, and `lib/stats.py` gives problem-level CIs — most deltas below
+> rest on 1–10 problems at N=3.
 
 > A recurring lesson worth stating up front: **the first headline number was
 > usually a metric artifact, not a finding.** Every eval got a skeptical
@@ -855,14 +868,17 @@ actually decide the hard multi-step problems.
 ```
 Phase 0  Foundations & decisions            ──► stack locked, spike done
 Phase 1  Harness skeleton + MVP assistant   ──► [GATE: parity with 001–003]
-Phase 2  Personal memory + tiered tools     ──► [GATE: 009-slice]
-Phase 3  Retrieval + conditional injection  ──► [GATE: 004 ← decision point, 005]
-Phase 4  Decomposition + depth handling     ──► [GATE: 006]
-Phase 5  Learning Loop (full) + forgetting  ──► [GATE: 008]   (only if 004 passed)
-Phase 6  Cross-domain transfer + graph DB?  ──► [GATE: 007 ← graph-DB decision]
-Phase 7  Jarvis capabilities                ──► [GATE: 009-full, continuous]
+Phase 2  Personal memory + tiered tools     ──► [GATE: daily-life slice]
+Phase 3  Retrieval + conditional injection  ──► [GATE: 004 + 006 on real retrieval]
+Phase 4  Harness caps + reworked decomp     ──► [GATE: hard multi-step reliable; decomposition re-test]
+Phase 5  Learning Loop (full) + forgetting  ──► [GATE: pruning helps]   (only if 004 passed ✓)
+Phase 6  Cross-domain transfer + graph DB?  ──► [GATE: graph beats flat ← graph-DB decision]
+Phase 7  Jarvis capabilities                ──► [GATE: daily-life full, continuous]
 Phase 8  Online continual + self-study      ──► [GATE: longitudinal]
 ```
+
+Gate names match the product-track table in §9.2 (the eval *numbers* used in
+earlier drafts of this summary predate the research evals' creation order).
 
 Each `[GATE]` is a `HarnessConfig` experiment on the real core. Phases 6–9 of
 draft 1's build order are intentionally *behind* their evals, not ahead.

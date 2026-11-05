@@ -16,17 +16,20 @@ evals/
     run_log.py            # per-cell human-readable log files
     scoring.py            # FINAL_ANSWER parsing, SI normalize, tolerance, salvage
     analyze.py            # runs.jsonl → summary.md + charts
+    stats.py              # problem-level CIs + paired tests (`python -m lib.stats runs.jsonl A B`)
     probe.py              # knowledge=present/absent labeling
 
   datasets/               # reusable across experiments.
     astrodynamics/
-      v1.json             # 34 problems with oracle cards + canonical methods
+      v1.json             # 38 problems (20 single / 18 multi) with oracle cards + canonical methods
       ground_truth.py     # functions to compute expected answers + CONSTANTS dict
 
   tests/                  # shared unit suite
     test_calculator.py    # 28 safety vectors + protocol parsing
     test_scoring.py       # FINAL_ANSWER + SI conversion + tolerance
     test_ground_truth.py  # asserts JSON expected matches computed
+    test_conditions.py    # solve loop acts on the answer, never <think>; tool-turn cap
+    test_stats.py         # cluster bootstrap, paired comparison, sign test
 
   001-astro-failure-modes/   # an EXPERIMENT — thin wrapper.
     config.yaml             # which dataset, which conditions, sampling knobs
