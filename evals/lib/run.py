@@ -3,13 +3,13 @@ Orchestrator: cross product of (problem × condition × run_idx) → runs.jsonl.
 
 Usage:
 
-    python -m src.run                              # default: from config.yaml
-    python -m src.run --conditions C1,C2,C3,REF
-    python -m src.run --conditions C1,C2,C3 --n-runs 2
-    python -m src.run --stub                       # canned model, for wiring tests
-    python -m src.run --no-judge                   # skip the LLM-as-judge method scoring
-    python -m src.run --problems astro-001,astro-005
-    python -m src.run -o results/runs.jsonl        # output path override
+    python -m lib.run                              # default: from config.yaml
+    python -m lib.run --conditions C1,C2,C3,REF
+    python -m lib.run --conditions C1,C2,C3 --n-runs 2
+    python -m lib.run --stub                       # canned model, for wiring tests
+    python -m lib.run --no-judge                   # skip the LLM-as-judge method scoring
+    python -m lib.run --problems astro-001,astro-005
+    python -m lib.run -o results/runs.jsonl        # output path override
 
 Each run appends a JSON line with:
   id, condition, run_idx, model, n_tool_calls, n_turns, latency_s,
@@ -240,6 +240,7 @@ def _record_for_run(
         "run_idx": run_idx,
         "model": model_name,
         "n_tool_calls": run.n_tool_calls,
+        "n_tool_turns": getattr(run, "n_tool_turns", None),
         "n_turns": run.n_turns,
         "latency_s": round(run.latency_s, 4),
         "prompt_tokens": run.prompt_tokens,
@@ -248,6 +249,9 @@ def _record_for_run(
         "tokens_per_second": round(run.tokens_per_second, 2),
         "stopped_reason": run.stopped_reason,
         "error": run.error,
+        # Largest single-call context; at/above the model's num_ctx Ollama
+        # silently truncated the prompt (see conditions.RunResult).
+        "peak_context_tokens": getattr(run, "peak_context_tokens", 0),
         "raw_output": run.final_text,
         "full_trace": run.full_trace,
     }
@@ -514,7 +518,7 @@ def run_all(
                         expected_value=problem["expected"]["value"],
                         expected_unit=problem["expected"]["unit"],
                         tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
-                        full_trace=run.full_trace,
+                        full_trace=run.answer_trace,
                     )
                     if use_judge and run.full_trace:
                         mc, rationale = judge_method(

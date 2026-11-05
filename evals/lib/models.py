@@ -20,9 +20,29 @@ Three implementations:
 from __future__ import annotations
 
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
+
+
+_THINK_BLOCK_RE = re.compile(r"<think>.*?(?:</think>|\Z)", re.DOTALL)
+_ONLY_THINKING_MARKER = "(only thinking content returned)"
+
+
+def strip_think(text: str) -> str:
+    """Remove `<think>…</think>` blocks (and an unterminated trailing one).
+
+    Anything the harness *acts on* — CALC/SYMB extraction, FINAL_ANSWER
+    parsing, card-name matching, the assistant turn fed back as history —
+    must come from the answer, never from the reasoning. A `CALC:` the model
+    merely *considers* while thinking is not a tool call, and a
+    `FINAL_ANSWER:` that only appears inside `<think>` is not an answer.
+    """
+    out = _THINK_BLOCK_RE.sub("", text)
+    if out.lstrip().startswith(_ONLY_THINKING_MARKER):
+        return ""
+    return out.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -30,10 +50,25 @@ from typing import Any, Callable, Optional
 # ---------------------------------------------------------------------------
 @dataclass
 class ChatResponse:
+    """`text` is the full trace for logs and the method judge — for Ollama
+    thinking runs it is `<think>reasoning</think>` + the answer. `answer` is
+    what the harness parses and feeds back as history: the model's content
+    with any reasoning removed."""
+
     text: str
     prompt_tokens: int = 0
     completion_tokens: int = 0
     latency_s: float = 0.0
+    # Answer-only content when the provider returns reasoning separately
+    # (Ollama's `message.thinking`). None → derive it from `text`.
+    content: Optional[str] = None
+    thinking: str = ""
+
+    @property
+    def answer(self) -> str:
+        if self.content is not None:
+            return self.content
+        return strip_think(self.text)
 
     @property
     def total_tokens(self) -> int:
@@ -248,17 +283,17 @@ class OllamaClient:
         latency = time.monotonic() - t0
 
         msg = payload.get("message") or {}
-        text = (msg.get("content") or "").strip()
+        content = (msg.get("content") or "").strip()
         thinking = (msg.get("thinking") or "").strip()
         # If we asked for thinking, surface it in the trace prefixed so the
-        # judge / per-run log can see what the model reasoned about. Keep
-        # `content` as the answer the harness scores — thinking is
-        # commentary, not the answer.
+        # judge / per-run log can see what the model reasoned about. Only
+        # `content` is the answer the harness parses (ChatResponse.answer).
+        text = content
         if thinking and disable_thinking is False:
-            text = f"<think>\n{thinking}\n</think>\n\n{text}"
-        elif not text and thinking:
+            text = f"<think>\n{thinking}\n</think>\n\n{content}"
+        elif not content and thinking:
             # Defensive: model emitted only thinking, no answer.
-            text = f"(only thinking content returned)\n<think>\n{thinking}\n</think>"
+            text = f"{_ONLY_THINKING_MARKER}\n<think>\n{thinking}\n</think>"
         prompt_tokens = int(payload.get("prompt_eval_count") or 0)
         completion_tokens = int(payload.get("eval_count") or 0)
         return ChatResponse(
@@ -266,6 +301,8 @@ class OllamaClient:
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             latency_s=latency,
+            content=content,
+            thinking=thinking,
         )
 
 

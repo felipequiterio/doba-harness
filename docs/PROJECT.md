@@ -6,9 +6,9 @@
 > over time without ever retraining the model.
 
 **Owner:** Felipe · **Date:** 2026-06-03
-**Sources:** vision from `draft.md` (draft 1); evidence from
+**Sources:** vision from `archive/draft.md` (draft 1); evidence from
 `evals/001-astro-failure-modes` and `evals/002`/`003-thinking-with-oracle`;
-design refinements tracked in `draft_3.md`.
+design refinements tracked in `archive/draft_3.md`.
 
 This document is the single source of truth: it restates the project as
 designed in draft 1, annotated with what the experiments actually showed.
@@ -43,10 +43,12 @@ is first-class; and knowledge in one area should help reasoning in others
 
 > **Evidence status of the thesis itself:** the experiments confirm the
 > *conditional* form of it. A 4B with the right structured knowledge in
-> context (C3) reached **75% vs the frontier's 60% raw** on a knowledge-
-> application benchmark — the harness genuinely beats raw weights *when the
-> knowledge is there*. What's **not yet proven** is that the agent can
-> *produce* that knowledge itself (the Learning Loop). See §4 and §7.
+> context (C3) reached **75% vs 60% for raw Gemini 2.5 Flash** (no
+> calculator) on a knowledge-application benchmark — the harness beats raw
+> weights *when the knowledge is there*. Evals 004/005/007 then showed the 4B
+> can *produce* that knowledge itself on small samples (§4, Pillar 5). Thinking-ON
+> results (002/003/007/008) predate two harness fixes and await a re-run — see
+> the note in [`PROJECT_PLAN.md` §9.1](PROJECT_PLAN.md).
 
 ---
 
@@ -211,7 +213,7 @@ ceiling. (Detailed per-eval record: `PROJECT_PLAN.md` §9.)
 | Claim from draft 1 | Status | Source |
 |---|---|---|
 | Small model + structured knowledge in context beats raw frontier | **Confirmed** (75% vs 60%) | 001 |
-| Structured typed cards are the right knowledge unit | **Confirmed** (+30 pp vs paragraph-RAG would give) | 001 |
+| Structured typed cards are the right knowledge unit | **Supported** (+30 pp from cards; paragraph-RAG was *not* tested, so "cards beat paragraphs" is still open) | 001 |
 | Recall should be conditional / agent-decided | **Confirmed & elevated** (−10 pp when over-injected) | 001 |
 | A reasoning-depth ceiling exists | **Not confirmed** — `astro-031` (cited as the 0/3 wall) solved **3/3** at adequate budget+turns; no genuine ceiling found | 003 → overturned by 008 |
 | The real failure mode on "hard" multi-step is *truncation/runaway*, not depth | **Confirmed** — apparent ceilings = token/turn limits (002/008); a 30k+-token thinking runaway is the recurring bug | 002/005/007/008 |

@@ -152,6 +152,25 @@ class Calculator:
         return cls(names)
 
     def eval(self, expr: str) -> float:
+        value = self._eval_raw(expr)
+        if not _is_number(value):
+            raise CalculatorError(f"expression did not evaluate to a number: {value!r}")
+        return float(value)
+
+    def eval_line(self, expr: str) -> "float | tuple[float, ...]":
+        """Evaluate one CALC line. Like `eval`, except that a comma-separated
+        line (`CALC: r1, r2, r3`) returns one value per item. Small models
+        write such lines constantly; rejecting them as a non-number tuple
+        made the model spend a whole tool round-trip just to resubmit the
+        items one per turn — on multi-step problems, enough to hit the cap."""
+        value = self._eval_raw(expr)
+        if isinstance(value, tuple) and value and all(_is_number(v) for v in value):
+            return tuple(float(v) for v in value)
+        if not _is_number(value):
+            raise CalculatorError(f"expression did not evaluate to a number: {value!r}")
+        return float(value)
+
+    def _eval_raw(self, expr: str) -> Any:
         # Treat `^` as exponentiation. Models very often write `r^2` for a
         # power, but Python parses `^` as bitwise-xor (which the AST walker
         # rejects) — so any CALC line using a caret would silently error. In
@@ -165,10 +184,11 @@ class Calculator:
             tree = ast.parse(expr, mode="eval")
         except SyntaxError as e:
             raise CalculatorError(f"syntax error: {e.msg}") from e
-        value = _eval_node(tree, self.names)
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise CalculatorError(f"expression did not evaluate to a number: {value!r}")
-        return float(value)
+        return _eval_node(tree, self.names)
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 # ---------------------------------------------------------------------------
@@ -190,11 +210,12 @@ def has_final_answer(text: str) -> bool:
     return _FINAL_RE.search(text) is not None
 
 
-def format_results(values: Iterable[float | str]) -> str:
+def format_results(values: Iterable["float | tuple[float, ...] | str"]) -> str:
     """Format calculator outputs as a single message back to the model.
 
     Single call → `RESULT: <value>`.
     Multiple calls → `RESULT[1]: <value>` lines in order.
+    A comma-separated CALC line → its values comma-separated on one line.
     Errors are returned as `ERROR: <msg>` (matching index).
     """
     values = list(values)
@@ -205,10 +226,12 @@ def format_results(values: Iterable[float | str]) -> str:
     return "\n".join(_format_one(v, prefix=f"RESULT[{i+1}]") for i, v in enumerate(values))
 
 
-def _format_one(value: float | str, *, prefix: str) -> str:
+def _format_one(value: "float | tuple[float, ...] | str", *, prefix: str) -> str:
     if isinstance(value, str):
         # An error message; surface it explicitly.
         return f"{prefix.replace('RESULT', 'ERROR')}: {value}"
+    if isinstance(value, tuple):
+        return f"{prefix}: " + ", ".join(f"{v:.10g}" for v in value)
     # Plenty of precision for any astrodynamics use; small models tend to
     # truncate aggressively, so we give them headroom.
     return f"{prefix}: {value:.10g}"
@@ -221,10 +244,10 @@ def evaluate_text(text: str, calc: Calculator) -> tuple[list[str], str]:
     Never raises.
     """
     exprs = extract_calc_calls(text)
-    results: list[float | str] = []
+    results: list[float | tuple[float, ...] | str] = []
     for e in exprs:
         try:
-            results.append(calc.eval(e))
+            results.append(calc.eval_line(e))
         except CalculatorError as err:
             results.append(str(err))
     return exprs, format_results(results)

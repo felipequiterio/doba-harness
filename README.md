@@ -140,9 +140,27 @@ ever achieve, on a set of astrodynamics problems with code-computed ground
 truth. Findings (full per-eval detail in
 [`PROJECT_PLAN.md §9`](docs/PROJECT_PLAN.md)):
 
+> **Read these as direction, not as measured effects — re-runs pending.**
+> - **Two harness bugs** affected the runs below (fixed in `evals/lib/`,
+>   2026-11): with thinking ON, the solve loop parsed and
+>   replayed the model's `<think>` text (a `CALC:` it only *considered* was
+>   executed, a `FINAL_ANSWER` inside `<think>` was scored, and old reasoning
+>   was re-fed every turn); and `max_tool_turns` counted CALC *expressions*
+>   instead of round-trips and dropped the capping turn's results. The
+>   thinking-ON findings (**002, 003, 007, 008**), **005**'s SymPy build
+>   modes and **006**'s select step need a re-run; 003's multi-step thinking effect is the most exposed.
+> - **Sample sizes are small** — several deltas rest on 1–10 problems × N=3,
+>   and runs of one problem are correlated, so *problems* are the real n.
+>   `python -m lib.stats` now reports problem-level CIs and paired tests.
+> - **"Frontier" means Gemini 2.5 Flash** (via OpenRouter), and REF ran
+>   **without the calculator** — so "4B + tool + oracle beats the raw
+>   frontier" compares a tool-using 4B against a tool-less reference.
+> - The `knowledge=absent/present` labels that split the +30pp / −10pp
+>   readouts come from a single-sample probe judged by an LLM, not from code.
+
 | Eval | Question | Headline result |
 |---|---|---|
-| **001** | Is failure missing *knowledge* or *reasoning depth*? | Oracle adds **+30pp** where the model doesn't know; a tool+oracle 4B **beats the raw frontier**; over-injecting known topics **hurts −10pp** |
+| **001** | Is failure missing *knowledge* or *reasoning depth*? | Oracle adds **+30pp** where the model doesn't know; a tool+oracle 4B (75%) **beats raw Gemini 2.5 Flash without tools** (60%); over-injecting known topics **hurts −10pp** |
 | **002** | Does `<think>` mode help? | It **hurts** the bare model (gets stuck without a tool round-trip); and a suspected reasoning "ceiling" turned out to be a **token-budget** limit |
 | **003** | Does thinking pay *with* the oracle? | The effect **flips by structure: +24pp multi-step / −22pp single-step**; one problem *looked* like a 0/3 reasoning ceiling (later overturned — see 008) |
 | **004** *(the gate)* | Can the 4B build its **own** cards? | **Yes** — recovers the oracle lift, leakage-free, and even *synthesizes* a closed form the passage never stated → Learning Loop is viable |
@@ -209,7 +227,7 @@ config values, which is what makes the product and the experiment the same code.
 docs/      design documents
   PROJECT.md        vision + eval findings (start here for the "why")
   PROJECT_PLAN.md   the master build plan (stack, phases, eval roadmap)
-  draft.md, draft_3.md   earlier design iterations (history)
+  archive/          earlier design iterations (drafts 1–3, history)
 
 evals/     the Python evaluation harness
   lib/         shared core — agent loop, model client (Ollama native),
@@ -240,14 +258,27 @@ make quick                # a real run on the local 4B
 Every run writes a timestamped `results/<timestamp>/` with per-cell logs, a
 JSONL record, and a `summary.md`. Result dirs are gitignored (regenerable).
 
+For uncertainty on any run, treat the problem as the unit of evidence:
+
+```bash
+uv run python -m lib.stats 004-self-built-cards/results/latest/runs.jsonl            # rate + 95% CI per condition
+uv run python -m lib.stats 004-self-built-cards/results/latest/runs.jsonl C3_self C2 # paired delta + sign test
+```
+
+CI (`.github/workflows/evals.yml`) runs the ground-truth check, the unit
+tests and every experiment's stub smoke run — no model needed.
+
 ---
 
 ## 10. Status
 
-Pre-product. The design and the research harness exist; the central bet (the
-Learning Loop can build its own knowledge) has **passed its gate**. Next up on
-the research track: multi-card building and decomposition. The TypeScript
-product is planned and unstarted.
+Pre-product. The design and the research harness exist; evals 001–008 have
+run, and the central bet (the Learning Loop can build its own knowledge) passed
+its gate on a small sample. Next up on the research track: **re-run the
+thinking-ON evals on the fixed harness** (see the note in §5), widen the
+`knowledge=absent` pool so 004 rests on more than one clean problem, and test
+the reworked decomposition (009). The TypeScript product is planned and
+unstarted.
 
 ### Source material note
 The evals reference Hintz, *Orbital Mechanics and Astrodynamics* for the

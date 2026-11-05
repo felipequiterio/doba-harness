@@ -170,3 +170,23 @@ class TestProtocol:
         assert len(exprs) == 2
         assert "ERROR[1]" in msg
         assert "RESULT[2]: 2" in msg
+
+    def test_comma_separated_line_returns_every_value(self, calc):
+        # Seen in eval 003 (astro-028): the model batches radii on one line.
+        # Rejecting the tuple cost a tool round-trip per occurrence.
+        exprs, msg = evaluate_text("CALC: 1 + 1, 2 * 3, sqrt(16)", calc)
+        assert exprs == ["1 + 1, 2 * 3, sqrt(16)"]
+        assert msg == "RESULT: 2, 6, 4"
+
+    def test_comma_line_mixes_with_other_lines(self, calc):
+        _, msg = evaluate_text("CALC: 1, 2\nCALC: 3", calc)
+        assert "RESULT[1]: 1, 2" in msg and "RESULT[2]: 3" in msg
+
+    def test_function_call_commas_are_not_split(self, calc):
+        _, msg = evaluate_text("CALC: atan2(1, 1)", calc)
+        assert msg == f"RESULT: {math.atan2(1, 1):.10g}"
+
+    def test_eval_still_rejects_tuples(self, calc):
+        # Programmatic callers (decompose) need exactly one number.
+        with pytest.raises(CalculatorError):
+            calc.eval("1, 2")

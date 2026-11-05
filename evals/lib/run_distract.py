@@ -131,7 +131,7 @@ def _select_cards(*, client, model_name, problem, cards, temperature, disable_th
         {"role": "system", "content": _SELECT_SYS},
         {"role": "user", "content": user},
     ], temperature=temperature, max_tokens=512, disable_thinking=disable_thinking)
-    reply_n = _norm(resp.text)
+    reply_n = _norm(resp.answer)  # names mentioned while thinking are not a selection
     selected = [c for c in cards if _norm(c.get("name", "")) and _norm(c["name"]) in reply_n]
     return selected, resp
 
@@ -255,7 +255,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                         run.final_text, expected_value=problem["expected"]["value"],
                         expected_unit=problem["expected"]["unit"],
                         tolerance_rel=problem.get("tolerance_rel", cfg.get("default_tolerance_rel", 0.01)),
-                        full_trace=run.full_trace)
+                        full_trace=run.answer_trace)
 
                     rec = {
                         "id": problem["id"], "topic": problem["topic"], "structure": problem["structure"],

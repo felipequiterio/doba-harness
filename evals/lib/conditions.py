@@ -137,11 +137,15 @@ def build_messages(
 @dataclass
 class TurnRecord:
     """One assistant turn's metadata. Kept alongside the message itself so
-    the per-run log can annotate every assistant message with tk/s + cost."""
+    the per-run log can annotate every assistant message with tk/s + cost.
+
+    `text` is the full turn as logged (may include a `<think>` block);
+    `answer` is the reasoning-free content the harness actually parsed."""
     text: str
     prompt_tokens: int
     completion_tokens: int
     latency_s: float
+    answer: str = ""
 
     @property
     def tokens_per_second(self) -> float:
@@ -155,9 +159,9 @@ class RunResult:
     condition: str
     problem_id: str
     raw_messages: list[dict[str, str]]
-    final_text: str               # the last assistant message
-    full_trace: str               # concatenation of all assistant messages (for the judge)
-    n_tool_calls: int
+    final_text: str               # the last assistant message's answer (reasoning stripped) — what gets scored
+    full_trace: str               # concatenation of all assistant messages incl. <think> (for logs + the judge)
+    n_tool_calls: int             # CALC expressions evaluated
     n_turns: int                  # assistant turns
     stopped_reason: str           # "final_answer" | "max_turns" | "max_tool_turns" | "error"
     latency_s: float              # wall-clock for the whole loop
@@ -165,6 +169,13 @@ class RunResult:
     prompt_tokens: int = 0        # summed across all turns
     completion_tokens: int = 0
     error: Optional[str] = None
+    # Concatenated answers only (no <think>) — the haystack for salvage, so a
+    # number the model merely considered while thinking is never scored.
+    answer_trace: str = ""
+    # Largest prompt+completion of any single call. Compare against the
+    # model's num_ctx: at or above it, Ollama silently truncated the context.
+    peak_context_tokens: int = 0
+    n_tool_turns: int = 0         # CALC→RESULT round-trips (what max_tool_turns caps)
 
     @property
     def total_tokens(self) -> int:
@@ -209,13 +220,19 @@ def run_condition(
 
     messages = build_messages(problem, condition, disable_thinking=disable_thinking)
     turns: list[TurnRecord] = []
-    n_tool_calls = 0
+    n_tool_calls = 0      # CALC expressions evaluated (a metric)
+    n_tool_turns = 0      # CALC→RESULT round-trips (what max_tool_turns caps)
     stopped = "max_turns"
     error: Optional[str] = None
     prodded = False
 
     def call_model(force_no_think: bool = False) -> str:
-        """Run one chat call, append a TurnRecord, return reply text.
+        """Run one chat call, append a TurnRecord, return the reply's answer.
+
+        Only the answer (reasoning stripped) is parsed and fed back as
+        history: a CALC/FINAL_ANSWER written inside `<think>` is not acted on,
+        and old reasoning is not re-injected into the context every turn
+        (which grew the prompt by ~3k tokens/turn on thinking-on solves).
         `force_no_think` overrides thinking OFF — used for the forced commit so
         the budget-exhausted turn doesn't spend its tokens thinking again."""
         resp = client.chat(
@@ -225,14 +242,16 @@ def run_condition(
             max_tokens=max_tokens,
             disable_thinking=True if force_no_think else disable_thinking,
         )
+        answer = resp.answer
         turns.append(TurnRecord(
             text=resp.text,
             prompt_tokens=resp.prompt_tokens,
             completion_tokens=resp.completion_tokens,
             latency_s=resp.latency_s,
+            answer=answer,
         ))
-        messages.append({"role": "assistant", "content": resp.text})
-        return resp.text
+        messages.append({"role": "assistant", "content": answer})
+        return answer
 
     def _total_completion() -> int:
         return sum(t.completion_tokens for t in turns)
@@ -247,7 +266,15 @@ def run_condition(
             if (max_total_completion_tokens
                     and _total_completion() >= max_total_completion_tokens
                     and not (not extract_calc_calls(reply) and has_final_answer(reply))):
-                messages.append({"role": "user", "content": (
+                # Answer any CALCs from the budget-exhausting turn first, so the
+                # forced commit can use them instead of guessing.
+                pending = extract_calc_calls(reply) if use_calc else []
+                prefix = ""
+                if pending:
+                    n_tool_calls += len(pending)
+                    n_tool_turns += 1
+                    prefix = evaluate_text(reply, calc)[1] + "\n\n"
+                messages.append({"role": "user", "content": prefix + (
                     "You have reached your token budget. Stop reasoning now. Using the "
                     "RESULT values you already have, output ONLY `FINAL_ANSWER: <value> "
                     "<unit>` on the next line — no thinking, no calculation.")})
@@ -285,20 +312,28 @@ def run_condition(
                 })
                 continue
 
+            # `max_tool_turns` caps CALC→RESULT round-trips (turns), as its
+            # name and config.yaml document — not CALC expressions: a turn with
+            # three CALC lines is one round-trip. The capping turn's CALCs are
+            # still answered, so the forced commit uses real numbers instead
+            # of guessing the last intermediate.
             n_tool_calls += len(calc_exprs)
-            if n_tool_calls > max_tool_turns:
+            n_tool_turns += 1
+            _, results_msg = evaluate_text(reply, calc)
+
+            if n_tool_turns >= max_tool_turns:
                 messages.append({
                     "role": "user",
-                    "content": (
+                    "content": results_msg + "\n\n" + (
                         "Tool-call cap reached. Stop computing and emit "
-                        "FINAL_ANSWER on the next line."
+                        "FINAL_ANSWER on the next line, using the RESULT "
+                        "values you have."
                     ),
                 })
                 reply = call_model()
                 stopped = "final_answer" if has_final_answer(reply) else "max_tool_turns"
                 break
 
-            _, results_msg = evaluate_text(reply, calc)
             # If the model also emitted a FINAL_ANSWER in this turn, it was
             # almost certainly based on hallucinated RESULT lines. Tell the
             # model to discard it and recompute from these real numbers.
@@ -316,10 +351,12 @@ def run_condition(
         error = repr(e)
 
     latency = time.monotonic() - t0
-    final_text = turns[-1].text if turns else ""
+    final_text = turns[-1].answer if turns else ""
     full_trace = "\n\n---\n\n".join(t.text for t in turns)
+    answer_trace = "\n\n---\n\n".join(t.answer for t in turns)
     prompt_total = sum(t.prompt_tokens for t in turns)
     completion_total = sum(t.completion_tokens for t in turns)
+    peak_context = max((t.prompt_tokens + t.completion_tokens for t in turns), default=0)
     return RunResult(
         condition=condition,
         problem_id=problem["id"],
@@ -334,4 +371,7 @@ def run_condition(
         prompt_tokens=prompt_total,
         completion_tokens=completion_total,
         error=error,
+        answer_trace=answer_trace,
+        peak_context_tokens=peak_context,
+        n_tool_turns=n_tool_turns,
     )
